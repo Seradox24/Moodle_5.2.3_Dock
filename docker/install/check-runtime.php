@@ -13,9 +13,10 @@ foreach ($required as $extension) {
 }
 $DB->get_record('course', ['id' => SITEID], '*', MUST_EXIST);
 if (!$CFG->disableupdateautodeploy) {
+    // In Moodle 5.x dirroot points at the public code root where plugins live.
     foreach (['theme', 'mod', 'local', 'admin/tool'] as $directory) {
-        if (!is_writable($CFG->dirroot . '/public/' . $directory)) {
-            fwrite(STDERR, "Plugin directory is not writable: public/{$directory}\n");
+        if (!is_writable($CFG->dirroot . '/' . $directory)) {
+            fwrite(STDERR, "Plugin directory is not writable: {$directory}\n");
             exit(1);
         }
     }
