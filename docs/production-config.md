@@ -51,6 +51,15 @@ deben realizarse en cada servicio y reflejarse posteriormente en `.env`.
 
 ## Copiar al servidor
 
+En la máquina de desarrollo Windows, los valores reales están preservados en
+`.env.server` (no versionado) y el archivo activo `.env` puede corresponder al
+perfil de pruebas (`docs/windows-test.md`). Antes de copiar al servidor,
+restaurar el perfil de producción:
+
+```powershell
+Copy-Item .env.server .env -Force
+```
+
 Crear `/opt/lms/moodle/.env`, pegar el contenido del archivo privado y completar
 los tres campos pendientes. Protegerlo con `chmod 600 .env`.
 Usar `sh scripts/preflight.sh --config-only` para validar esos valores.

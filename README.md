@@ -148,6 +148,7 @@ embedding them in this Compose project.
 
 - `docs/ubuntu-26-deploy.md`
 - `docs/deploy-runbook.md`
+- `docs/windows-test.md`
 - `docs/production-config.md`
 - `docs/plugins.md`
 - `docs/architecture.md`
