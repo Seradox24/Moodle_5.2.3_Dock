@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+secrets/
+backups/
+logs/
+*.dump
+*.sql
+*.tar
+*.tar.gz
+*.tar.zst
+.DS_Store
+.idea/
+.vscode/

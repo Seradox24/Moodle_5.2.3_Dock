@@ -1,0 +1,201 @@
+name: ${COMPOSE_PROJECT_NAME:-lms-moodle}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  code-init:
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:5.2.3
+    pull_policy: never
+    restart: "no"
+    command: ["init-code"]
+    network_mode: none
+    read_only: true
+    volumes:
+      - type: volume
+        source: moodle-code
+        target: /var/www/moodle/public
+        volume:
+          nocopy: true
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        NGINX_IMAGE: ${NGINX_IMAGE:-nginx:1.28-alpine}
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-web:5.2.3
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${MOODLE_HTTP_BIND:-127.0.0.1}:${MOODLE_HTTP_PORT:-18080}:80"
+    volumes:
+      - type: volume
+        source: moodle-code
+        target: /var/www/moodle/public
+        read_only: true
+        volume:
+          nocopy: true
+    networks:
+      - application
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *logging
+
+  app:
+    build:
+      context: .
+      target: app
+      args:
+        MOODLE_GIT_TAG: ${MOODLE_GIT_TAG:-v5.2.3}
+        MOODLE_GIT_REF: ${MOODLE_GIT_REF:-344232c15336c71b80f9aca8359ce0e0a9f3d116}
+        PHP_IMAGE: ${PHP_IMAGE:-php:8.3-fpm-bookworm}
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:5.2.3
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MOODLE_DB_HOST: db
+      MOODLE_DB_PORT: "5432"
+      MOODLE_REDIS_HOST: ${MOODLE_REDIS_HOST:-redis}
+      MOODLE_REDIS_PORT: ${MOODLE_REDIS_PORT:-6379}
+    depends_on:
+      code-init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - moodledata:/var/moodledata
+      - type: volume
+        source: moodle-code
+        target: /var/www/moodle/public
+        volume:
+          nocopy: true
+    networks:
+      - application
+      - data
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "php -r '$$s=@fsockopen(\"127.0.0.1\",9000); exit($$s ? 0 : 1);'"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *logging
+
+  cron:
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:5.2.3
+    pull_policy: never
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MOODLE_DB_HOST: db
+      MOODLE_DB_PORT: "5432"
+      MOODLE_REDIS_HOST: ${MOODLE_REDIS_HOST:-redis}
+      MOODLE_REDIS_PORT: ${MOODLE_REDIS_PORT:-6379}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    command: ["/usr/local/bin/moodle-cron-loop.sh"]
+    volumes:
+      - moodledata:/var/moodledata
+      - type: volume
+        source: moodle-code
+        target: /var/www/moodle/public
+        read_only: true
+        volume:
+          nocopy: true
+    networks:
+      - application
+      - data
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    logging: *logging
+
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-moodle}
+      POSTGRES_USER: ${POSTGRES_USER:-moodle}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      TZ: ${TZ:-America/Santiago}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-moodle} -d ${POSTGRES_DB:-moodle}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *logging
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory-policy
+      - allkeys-lru
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    logging: *logging
+
+networks:
+  application:
+    driver: bridge
+  data:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres-data:
+  moodledata:
+  moodle-code:

@@ -1,0 +1,14 @@
+# Vanilla Moodle 5.2.3 initial installation.
+#
+# No third-party plugins are included in the first build.
+# Web installations persist in moodle-code; maintain this inventory manually.
+#
+# When a plugin is added, record at least:
+# component=
+# path=
+# version=
+# release=
+# source=
+# ref=
+# sha256=
+# license=
