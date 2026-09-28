@@ -1,0 +1,3 @@
+services:
+  dotenv-parser:
+    image: scratch

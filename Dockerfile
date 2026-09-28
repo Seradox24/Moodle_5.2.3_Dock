@@ -1,26 +1,44 @@
-ARG PHP_IMAGE=php:8.3-fpm-bookworm
-ARG NGINX_IMAGE=nginx:1.28-alpine
+ARG DEBIAN_IMAGE
+ARG PHP_IMAGE
+ARG NGINX_IMAGE
 
-FROM debian:bookworm-slim AS moodle-source
+FROM ${DEBIAN_IMAGE} AS moodle-source
 
-ARG MOODLE_GIT_TAG=v5.2.3
-ARG MOODLE_GIT_REF=344232c15336c71b80f9aca8359ce0e0a9f3d116
+ARG MOODLE_VERSION
+ARG MOODLE_GIT_TAG
+ARG MOODLE_GIT_REF
+ARG LAUNCHER_VERSION
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git init /src \
+RUN test "${MOODLE_GIT_TAG#v}" = "${MOODLE_VERSION}" \
+    && git init /src \
     && cd /src \
     && git remote add origin https://github.com/moodle/moodle.git \
     && git fetch --depth 1 origin "refs/tags/${MOODLE_GIT_TAG}:refs/tags/${MOODLE_GIT_TAG}" \
     && git checkout --detach "${MOODLE_GIT_TAG}" \
     && test "$(git rev-parse HEAD)" = "${MOODLE_GIT_REF}" \
     && printf '%s\n' "${MOODLE_GIT_REF}" > /src/.build-ref \
+    && printf '%s\n' "${MOODLE_VERSION}" > /src/.build-version \
+    && printf '%s\n' "${LAUNCHER_VERSION}" > /src/.launcher-version \
     && rm -rf /src/.git \
     && mv /src/public /moodle-public
 
 FROM ${PHP_IMAGE} AS app
+
+ARG LAUNCHER_VERSION
+ARG MOODLE_VERSION
+ARG MOODLE_GIT_REF
+ARG RELEASE_IMAGE_TAG
+
+LABEL org.opencontainers.image.version="${RELEASE_IMAGE_TAG}" \
+      org.opencontainers.image.revision="${MOODLE_GIT_REF}" \
+      io.lms.launcher.version="${LAUNCHER_VERSION}" \
+      io.lms.moodle.version="${MOODLE_VERSION}"
+
+RUN test "${RELEASE_IMAGE_TAG}" = "moodle-${MOODLE_VERSION}-launcher-${LAUNCHER_VERSION}"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -68,9 +86,10 @@ COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-moodle.conf
 COPY docker/cron/moodle-cron-loop.sh /usr/local/bin/moodle-cron-loop.sh
 COPY docker/install/init-code.sh /usr/local/bin/init-code.sh
 COPY docker/install/moodle-entrypoint.sh /usr/local/bin/moodle-entrypoint.sh
+COPY docker/php/generate-limits.sh /usr/local/bin/generate-limits.sh
 
 RUN chmod 0755 /usr/local/bin/moodle-cron-loop.sh \
-    && chmod 0755 /usr/local/bin/init-code.sh /usr/local/bin/moodle-entrypoint.sh \
+    && chmod 0755 /usr/local/bin/init-code.sh /usr/local/bin/moodle-entrypoint.sh /usr/local/bin/generate-limits.sh \
     && mkdir -p /var/moodledata /var/www/moodle/public \
     && chown -R root:root /var/www/moodle \
     && chmod -R a-w /var/www/moodle \
@@ -86,10 +105,26 @@ CMD ["php-fpm"]
 
 FROM ${NGINX_IMAGE} AS web
 
+ARG LAUNCHER_VERSION
+ARG MOODLE_VERSION
+ARG MOODLE_GIT_REF
+ARG RELEASE_IMAGE_TAG
+
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx-conf.d \
+    MOODLE_MAX_REQUEST_MB=300 \
+    MOODLE_FASTCGI_READ_TIMEOUT_SECONDS=120
+
+LABEL org.opencontainers.image.version="${RELEASE_IMAGE_TAG}" \
+      org.opencontainers.image.revision="${MOODLE_GIT_REF}" \
+      io.lms.launcher.version="${LAUNCHER_VERSION}" \
+      io.lms.moodle.version="${MOODLE_VERSION}"
+
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/limits.conf.template /etc/nginx/templates/limits.conf.template
 
 # Match the PHP www-data GID so Nginx can read plugin assets created with 0770.
 # The shared code volume is mounted read-only in this service.
 RUN addgroup -S -g 33 moodle-code \
+    && test "${RELEASE_IMAGE_TAG}" = "moodle-${MOODLE_VERSION}-launcher-${LAUNCHER_VERSION}" \
     && addgroup nginx moodle-code \
     && mkdir -p /var/www/moodle/public

@@ -2,30 +2,39 @@
 set -eu
 
 cd "$(dirname "$0")/.."
+. ./scripts/lib/compose-env.sh
 
-[ -f .env ] || {
-    echo "Missing .env" >&2
-    exit 1
-}
+env_file=.env
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --env-file)
+            [ "$#" -ge 2 ] || { echo "--env-file requires a path." >&2; exit 1; }
+            env_file=$2
+            shift 2
+            ;;
+        *) echo "Unknown argument: $1" >&2; exit 1 ;;
+    esac
+done
+compose_init "$env_file"
 
-url="$(docker compose config --environment | sed -n 's/^MOODLE_WWWROOT=//p')"
+url="$(compose_env_value MOODLE_WWWROOT http://localhost:18080)"
 [ -n "$url" ] || { echo "MOODLE_WWWROOT is missing" >&2; exit 1; }
 url="${url%/}"
 
 echo "== Containers =="
-docker compose ps
+compose ps
 
 echo
 echo "== PostgreSQL =="
-docker compose exec -T db sh -lc 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+compose exec -T db sh -lc 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 
 echo
 echo "== Redis =="
-docker compose exec -T redis redis-cli ping
+compose exec -T redis redis-cli ping
 
 echo
 echo "== Moodle, database, PHP extensions and plugin permissions =="
-docker compose exec -T --user www-data app php /usr/local/bin/check-runtime.php
+compose exec -T --user www-data app php /usr/local/bin/check-runtime.php
 
 echo
 echo "== HTTP =="

@@ -16,7 +16,7 @@ fail() {
 
 if [ -f "$marker" ]; then
     [ "$(cat "$marker")" = "$expected" ] || fail \
-        "moodle-code belongs to a different Moodle release. Follow docs/plugins.md before upgrading the core."
+        "moodle-code belongs to a different Moodle release. Back up the database, moodledata and code before upgrading."
     [ -f "$target/version.php" ] && [ -f "$target/config.php" ] && [ -f "$target/lib/setup.php" ] || fail \
         "moodle-code is incomplete. Restore the code backup; it will not be overwritten automatically."
     echo "[code-init] Existing Moodle code and installed plugins preserved."

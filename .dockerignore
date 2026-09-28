@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+environments/*
+!environments/*.env.example
+releases
 secrets
 backups
 logs
@@ -11,5 +14,7 @@ logs
 *.tar.gz
 *.tar.zst
 README.md
+deploy-runbook.md
 docs
 tests
+deploy

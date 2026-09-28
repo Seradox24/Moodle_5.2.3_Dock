@@ -6,9 +6,41 @@ x-logging: &logging
     max-size: "10m"
     max-file: "3"
 
+x-release-build-args: &release-build-args
+  DEBIAN_IMAGE: ${DEBIAN_IMAGE:?Release metadata is missing DEBIAN_IMAGE}
+  PHP_IMAGE: ${PHP_IMAGE:?Release metadata is missing PHP_IMAGE}
+  NGINX_IMAGE: ${NGINX_IMAGE:?Release metadata is missing NGINX_IMAGE}
+  MOODLE_VERSION: ${MOODLE_VERSION:?Release metadata is missing MOODLE_VERSION}
+  MOODLE_GIT_TAG: ${MOODLE_GIT_TAG:?Release metadata is missing MOODLE_GIT_TAG}
+  MOODLE_GIT_REF: ${MOODLE_GIT_REF:?Release metadata is missing MOODLE_GIT_REF}
+  LAUNCHER_VERSION: ${LAUNCHER_VERSION:?Release metadata is missing LAUNCHER_VERSION}
+  RELEASE_IMAGE_TAG: ${RELEASE_IMAGE_TAG:?Release metadata is missing RELEASE_IMAGE_TAG}
+
+x-moodle-runtime-environment: &moodle-runtime-environment
+  POSTGRES_DB: ${POSTGRES_DB:-moodle}
+  POSTGRES_USER: ${POSTGRES_USER:-moodle}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the selected environment file}
+  MOODLE_DB_PREFIX: ${MOODLE_DB_PREFIX:-mdl_}
+  MOODLE_WWWROOT: ${MOODLE_WWWROOT:-http://localhost:18080}
+  MOODLE_REVERSEPROXY: ${MOODLE_REVERSEPROXY:-true}
+  MOODLE_SSLPROXY: ${MOODLE_SSLPROXY:-false}
+  MOODLE_ROUTER_CONFIGURED: ${MOODLE_ROUTER_CONFIGURED:-true}
+  MOODLE_PLUGIN_INSTALL: ${MOODLE_PLUGIN_INSTALL:-true}
+  MOODLE_REDIS_SESSIONS: ${MOODLE_REDIS_SESSIONS:-false}
+  MOODLE_REDIS_HOST: ${MOODLE_REDIS_HOST:-redis}
+  MOODLE_REDIS_PORT: ${MOODLE_REDIS_PORT:-6379}
+  MOODLE_REDIS_DATABASE: ${MOODLE_REDIS_DATABASE:-0}
+  MOODLE_REDIS_PREFIX: ${MOODLE_REDIS_PREFIX:-moodle_session_}
+  MOODLE_MAX_UPLOAD_MB: ${MOODLE_MAX_UPLOAD_MB:-256}
+  MOODLE_MAX_REQUEST_MB: ${MOODLE_MAX_REQUEST_MB:-300}
+  MOODLE_MEMORY_LIMIT_MB: ${MOODLE_MEMORY_LIMIT_MB:-512}
+  MOODLE_MAX_EXECUTION_SECONDS: ${MOODLE_MAX_EXECUTION_SECONDS:-30}
+  MOODLE_FPM_MAX_CHILDREN: ${MOODLE_FPM_MAX_CHILDREN:-5}
+  PHP_INI_SCAN_DIR: /usr/local/etc/php/conf.d:/run/php
+
 services:
   code-init:
-    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:5.2.3
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     pull_policy: never
     restart: "no"
     command: ["init-code"]
@@ -26,10 +58,14 @@ services:
     build:
       context: .
       target: web
-      args:
-        NGINX_IMAGE: ${NGINX_IMAGE:-nginx:1.28-alpine}
-    image: ${IMAGE_NAMESPACE:-lms}/moodle-web:5.2.3
+      args: *release-build-args
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-web:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     restart: unless-stopped
+    environment:
+      TZ: America/Santiago
+      NGINX_ENVSUBST_OUTPUT_DIR: /tmp/nginx-conf.d
+      MOODLE_MAX_REQUEST_MB: ${MOODLE_MAX_REQUEST_MB:-300}
+      MOODLE_FASTCGI_READ_TIMEOUT_SECONDS: ${MOODLE_FASTCGI_READ_TIMEOUT_SECONDS:-120}
     depends_on:
       app:
         condition: service_healthy
@@ -49,6 +85,7 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
+      - /tmp/nginx-conf.d
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
       interval: 30s
@@ -61,19 +98,20 @@ services:
     build:
       context: .
       target: app
-      args:
-        MOODLE_GIT_TAG: ${MOODLE_GIT_TAG:-v5.2.3}
-        MOODLE_GIT_REF: ${MOODLE_GIT_REF:-344232c15336c71b80f9aca8359ce0e0a9f3d116}
-        PHP_IMAGE: ${PHP_IMAGE:-php:8.3-fpm-bookworm}
-    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:5.2.3
+      args: *release-build-args
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
+      <<: *moodle-runtime-environment
+      TZ: America/Santiago
       MOODLE_DB_HOST: db
       MOODLE_DB_PORT: "5432"
-      MOODLE_REDIS_HOST: ${MOODLE_REDIS_HOST:-redis}
-      MOODLE_REDIS_PORT: ${MOODLE_REDIS_PORT:-6379}
+      MOODLE_SITE_FULLNAME: ${MOODLE_SITE_FULLNAME:?Set MOODLE_SITE_FULLNAME in the selected environment file}
+      MOODLE_SITE_SHORTNAME: ${MOODLE_SITE_SHORTNAME:?Set MOODLE_SITE_SHORTNAME in the selected environment file}
+      MOODLE_LANG: ${MOODLE_LANG:-es}
+      MOODLE_ADMIN_USER: ${MOODLE_ADMIN_USER:-admin}
+      MOODLE_ADMIN_PASSWORD: ${MOODLE_ADMIN_PASSWORD:?Set MOODLE_ADMIN_PASSWORD in the selected environment file}
+      MOODLE_ADMIN_EMAIL: ${MOODLE_ADMIN_EMAIL:?Set MOODLE_ADMIN_EMAIL in the selected environment file}
     depends_on:
       code-init:
         condition: service_completed_successfully
@@ -108,16 +146,14 @@ services:
     logging: *logging
 
   cron:
-    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:5.2.3
+    image: ${IMAGE_NAMESPACE:-lms}/moodle-app:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     pull_policy: never
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
+      <<: *moodle-runtime-environment
+      TZ: America/Santiago
       MOODLE_DB_HOST: db
       MOODLE_DB_PORT: "5432"
-      MOODLE_REDIS_HOST: ${MOODLE_REDIS_HOST:-redis}
-      MOODLE_REDIS_PORT: ${MOODLE_REDIS_PORT:-6379}
     depends_on:
       db:
         condition: service_healthy
@@ -144,13 +180,16 @@ services:
     logging: *logging
 
   db:
-    image: ${POSTGRES_IMAGE:-postgres:16}
+    image: ${POSTGRES_IMAGE:?Release metadata is missing POSTGRES_IMAGE}
     restart: unless-stopped
+    # Force the session/log timezone at every start: a cluster initialised
+    # without TZ keeps Etc/UTC even when the container is later restarted with TZ.
+    command: ["-c", "timezone=America/Santiago", "-c", "log_timezone=America/Santiago"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-moodle}
       POSTGRES_USER: ${POSTGRES_USER:-moodle}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      TZ: ${TZ:-America/Santiago}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the selected environment file}
+      TZ: America/Santiago
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
@@ -168,7 +207,7 @@ services:
     logging: *logging
 
   redis:
-    image: ${REDIS_IMAGE:-redis:7-alpine}
+    image: ${REDIS_IMAGE:?Release metadata is missing REDIS_IMAGE}
     restart: unless-stopped
     command:
       - redis-server

@@ -1,36 +1,35 @@
+param([string]$EnvFile = '.env')
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location -LiteralPath $repoRoot
+. (Join-Path $PSScriptRoot 'compose-env.ps1')
 
-if (-not (Test-Path -LiteralPath '.env')) {
-    Write-Host 'Missing .env' -ForegroundColor Red
-    exit 1
-}
+Initialize-ComposeEnvironment -EnvFile $EnvFile
 
-$resolved = docker compose config --environment
+$resolved = Invoke-Compose config --environment
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $url = ($resolved | Where-Object { $_ -like 'MOODLE_WWWROOT=*' }) -replace '^MOODLE_WWWROOT=', ''
 if (-not $url) { throw 'MOODLE_WWWROOT is missing.' }
 $url = $url.TrimEnd('/')
 
 Write-Host '== Containers =='
-docker compose ps
+Invoke-Compose ps
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ''
 Write-Host '== PostgreSQL =='
-docker compose exec -T db sh -lc 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+Invoke-Compose exec -T db sh -lc 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ''
 Write-Host '== Redis =='
-docker compose exec -T redis redis-cli ping
+Invoke-Compose exec -T redis redis-cli ping
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ''
 Write-Host '== Moodle, database, PHP extensions and plugin permissions =='
-docker compose exec -T --user www-data app php /usr/local/bin/check-runtime.php
+Invoke-Compose exec -T --user www-data app php /usr/local/bin/check-runtime.php
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ''

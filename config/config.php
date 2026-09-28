@@ -55,8 +55,6 @@ $CFG->preventexecpath = true;
 $CFG->disableupdateautodeploy = !env_bool('MOODLE_PLUGIN_INSTALL', true);
 $CFG->debug = 0;
 $CFG->debugdisplay = false;
-// Keep outbound mail disabled until SMTP is configured in site administration.
-$CFG->noemailever = !env_bool('MOODLE_MAIL_ENABLED', false);
 
 if (env_bool('MOODLE_REDIS_SESSIONS', false)) {
     $CFG->session_handler_class = '\core\session\redis';

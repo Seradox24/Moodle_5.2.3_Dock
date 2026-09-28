@@ -12,4 +12,7 @@ if [ ! -r "$marker" ] || [ "$(cat "$marker")" != "$(cat /var/www/moodle/.build-r
     exit 1
 fi
 
+sh /usr/local/bin/generate-limits.sh
+export PHP_INI_SCAN_DIR="/usr/local/etc/php/conf.d:/run/php"
+
 exec docker-php-entrypoint "$@"

@@ -1,7 +1,8 @@
 .env
 .env.*
 !.env.example
-!.env.windows
+environments/*
+!environments/*.env.example
 secrets/
 backups/
 logs/

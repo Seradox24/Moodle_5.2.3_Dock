@@ -1,0 +1,50 @@
+# Central host Nginx site template. Adapt the domain, certificate paths and
+# loopback port before enabling this file. This site is not part of Moodle's
+# Compose stack and is not managed by its start/stop scripts.
+
+server {
+    listen 80;
+    server_name moodle.example.edu;
+
+    return 301 https://moodle.example.edu$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name moodle.example.edu;
+
+    ssl_certificate     /etc/letsencrypt/live/moodle.example.edu/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/moodle.example.edu/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Must be >= MOODLE_MAX_REQUEST_MB of the selected Moodle profile
+    # (production default: 300).
+    client_max_body_size 300m;
+
+    location / {
+        proxy_pass http://127.0.0.1:18080;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_redirect off;
+
+        # Moodle runs with reverseproxy=true and requires the Host header to
+        # keep pointing at the INTERNAL upstream; the public identity travels
+        # in X-Forwarded-Host. Forwarding the public Host here makes Moodle
+        # throw 'reverseproxyabused'.
+        proxy_set_header Host              $proxy_host;
+        proxy_set_header X-Forwarded-Host  moodle.example.edu;
+        proxy_set_header X-Forwarded-Port  443;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Server moodle.example.edu;
+
+        # This Nginx is the trusted edge: overwrite client-supplied forwarding
+        # headers instead of appending an untrusted X-Forwarded-For chain.
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header Forwarded         "";
+
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+}

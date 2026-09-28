@@ -1,0 +1,2 @@
+client_max_body_size ${MOODLE_MAX_REQUEST_MB}m;
+fastcgi_read_timeout ${MOODLE_FASTCGI_READ_TIMEOUT_SECONDS}s;
