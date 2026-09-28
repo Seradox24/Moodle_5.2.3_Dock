@@ -10,10 +10,8 @@ está en `D:\Servidor\documentacion general\Moodle`, fuera de Git.
 - `compose.yaml`: servicios web, PHP, cron, PostgreSQL y Redis.
 - `Dockerfile`, `docker/` y `config/`: imágenes y configuración de Moodle.
 - `releases/release.env`: versiones y referencias fijadas de las imágenes.
-- `.env.example` y `environments/local.env.example`: ejemplos sin contraseñas.
+- `.env.example`: plantilla única, sin contraseñas reales.
 - `scripts/`: instalación, validación, operación y copia de seguridad.
-- `plugins/manifest.lock`: inventario de plugins añadidos después de instalar.
-- `deploy/nginx/moodle-site.conf.example`: ejemplo para Nginx del host.
 
 No subir archivos `.env`, respaldos, bases de datos ni `moodledata` a Git.
 Los tres volúmenes de Compose guardan la base, los archivos de Moodle y el
@@ -30,15 +28,15 @@ Set-Location dev
 .\scripts\windows\prepare-env.ps1
 ```
 
-El último comando crea `environments/local.env` con contraseñas aleatorias.
+El último comando crea `.env` con contraseñas aleatorias.
 Antes de instalar, cambiar `MOODLE_ADMIN_EMAIL` por un correo propio y revisar
 `MOODLE_WWWROOT=http://localhost:18080` y
 `COMPOSE_PROJECT_NAME=lms-moodle-dev`. Después:
 
 ```powershell
-.\scripts\windows\preflight.ps1 -EnvFile environments/local.env -ConfigOnly
-.\scripts\windows\install.ps1 -EnvFile environments/local.env
-.\scripts\windows\smoke-test.ps1 -EnvFile environments/local.env
+.\scripts\windows\preflight.ps1 -EnvFile .env -ConfigOnly
+.\scripts\windows\install.ps1 -EnvFile .env
+.\scripts\windows\smoke-test.ps1 -EnvFile .env
 ```
 
 Abrir `http://localhost:18080`. Para probar una revisión nueva, editar y
@@ -89,9 +87,8 @@ existente usar `sh ./scripts/start.sh`. La base de datos y `moodledata` deben
 respaldarse también fuera del servidor y restaurarse juntos. Nunca volver a
 ejecutar una instalación inicial sobre volúmenes con datos de producción.
 
-Para publicar mediante Nginx, adaptar
-`deploy/nginx/moodle-site.conf.example` al dominio y comprobar
-`nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
+Para publicar mediante Nginx, configurar el proxy central del servidor según
+la URL definitiva y comprobar `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
 `127.0.0.1`; PostgreSQL y Redis no publican puertos del host.
 
 ## Flujo único de cambios

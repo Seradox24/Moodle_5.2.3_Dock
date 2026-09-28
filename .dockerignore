@@ -2,8 +2,6 @@
 .env
 .env.*
 !.env.example
-environments/*
-!environments/*.env.example
 releases
 secrets
 backups
@@ -17,4 +15,3 @@ README.md
 deploy-runbook.md
 docs
 tests
-deploy

@@ -3,8 +3,8 @@ set -eu
 umask 077
 
 repo_root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd -P)
-example="$repo_root/environments/local.env.example"
-output=environments/local.env
+example="$repo_root/.env.example"
+output=.env
 project_name=lms-moodle-dev
 
 while [ "$#" -gt 0 ]; do
@@ -41,7 +41,7 @@ if [ "${#project_name}" -gt 63 ]; then
 fi
 
 if [ ! -f "$example" ]; then
-    echo "ERROR: local environment example is missing." >&2
+    echo "ERROR: .env.example is missing." >&2
     exit 1
 fi
 
@@ -84,17 +84,18 @@ trap 'exit 1' HUP INT TERM
 } | awk -v project_name="$project_name" '
     NR == 1 { db_password = $0; next }
     NR == 2 { admin_password = $0; next }
-    $0 == "COMPOSE_PROJECT_NAME=lms-moodle-dev" {
+    $0 == "COMPOSE_PROJECT_NAME=lms-moodle" {
         print "COMPOSE_PROJECT_NAME=" project_name
         project_found = 1
         next
     }
-    $0 == "POSTGRES_PASSWORD=CHANGE_ME_LOCAL_DB_PASSWORD" {
+    $0 == "IMAGE_NAMESPACE=lms" { print "IMAGE_NAMESPACE=lmsdev"; next }
+    $0 == "POSTGRES_PASSWORD=CHANGE_ME_STRONG_DB_PASSWORD" {
         print "POSTGRES_PASSWORD=" db_password
         db_found = 1
         next
     }
-    $0 == "MOODLE_ADMIN_PASSWORD=CHANGE_ME_LOCAL_ADMIN_PASSWORD" {
+    $0 == "MOODLE_ADMIN_PASSWORD=CHANGE_ME_STRONG_ADMIN_PASSWORD" {
         print "MOODLE_ADMIN_PASSWORD=" admin_password
         admin_found = 1
         next

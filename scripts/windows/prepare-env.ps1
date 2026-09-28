@@ -1,29 +1,29 @@
 param(
-    [string]$OutputPath = 'environments/local.env',
+    [string]$OutputPath = '.env',
     [string]$ProjectName = 'lms-moodle-dev'
 )
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-$example = Join-Path $repoRoot 'environments\local.env.example'
+$example = Join-Path $repoRoot '.env.example'
 $candidate = if ([IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $repoRoot $OutputPath }
 $target = [IO.Path]::GetFullPath($candidate)
 $targetDirectory = Split-Path -Parent $target
 
-if (-not (Test-Path -LiteralPath $example -PathType Leaf)) { throw 'Local environment example is missing.' }
+if (-not (Test-Path -LiteralPath $example -PathType Leaf)) { throw '.env.example is missing.' }
 if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) { throw "Output directory does not exist: $targetDirectory" }
 if ($ProjectName -notmatch '^[a-z0-9][a-z0-9_-]{0,62}$') {
     throw 'ProjectName must start with a lowercase letter or digit and contain at most 63 lowercase letters, digits, underscores or hyphens.'
 }
 
 $content = [IO.File]::ReadAllText($example)
-$projectMarker = 'COMPOSE_PROJECT_NAME=lms-moodle-dev'
-$dbMarker = 'POSTGRES_PASSWORD=CHANGE_ME_LOCAL_DB_PASSWORD'
-$adminMarker = 'MOODLE_ADMIN_PASSWORD=CHANGE_ME_LOCAL_ADMIN_PASSWORD'
+$projectMarker = 'COMPOSE_PROJECT_NAME=lms-moodle'
+$dbMarker = 'POSTGRES_PASSWORD=CHANGE_ME_STRONG_DB_PASSWORD'
+$adminMarker = 'MOODLE_ADMIN_PASSWORD=CHANGE_ME_STRONG_ADMIN_PASSWORD'
 if ([regex]::Matches($content, [regex]::Escape($projectMarker)).Count -ne 1 -or
     [regex]::Matches($content, [regex]::Escape($dbMarker)).Count -ne 1 -or
     [regex]::Matches($content, [regex]::Escape($adminMarker)).Count -ne 1) {
-    throw 'Local environment example must contain one project marker and one marker for each generated password.'
+    throw '.env.example must contain one project marker and one marker for each generated password.'
 }
 
 $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
@@ -36,7 +36,7 @@ try {
 finally { $rng.Dispose() }
 $dbPassword = [Convert]::ToBase64String($dbBytes)
 $adminPassword = [Convert]::ToBase64String($adminBytes)
-$content = $content.Replace($projectMarker, "COMPOSE_PROJECT_NAME=$ProjectName").Replace($dbMarker, "POSTGRES_PASSWORD=$dbPassword").Replace($adminMarker, "MOODLE_ADMIN_PASSWORD=$adminPassword")
+$content = $content.Replace($projectMarker, "COMPOSE_PROJECT_NAME=$ProjectName").Replace('IMAGE_NAMESPACE=lms', 'IMAGE_NAMESPACE=lmsdev').Replace($dbMarker, "POSTGRES_PASSWORD=$dbPassword").Replace($adminMarker, "MOODLE_ADMIN_PASSWORD=$adminPassword")
 $encoding = [Text.UTF8Encoding]::new($false)
 $bytes = $encoding.GetBytes($content)
 

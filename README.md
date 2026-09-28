@@ -32,8 +32,7 @@ servidor. Solo `web` publica el puerto configurado para el proxy del host.
 ├── config/                  ← configuración de Moodle
 ├── docker/                  ← archivos para construir las imágenes
 ├── releases/release.env     ← versiones fijadas
-├── scripts/                 ← instalación, comprobaciones y respaldos
-└── deploy/                  ← ejemplo de configuración del Nginx del host
+└── scripts/                 ← instalación, comprobaciones y respaldos
 
 ```
 
@@ -78,6 +77,10 @@ Sustituye los valores de ejemplo antes de instalar:
 
 El `.env` contiene credenciales y está excluido de Git. Los valores de
 `releases/release.env` pertenecen a la versión del repositorio y no se copian
-al `.env`. Para crear el entorno de prueba en Windows se usa
-`environments/local.env.example`; el procedimiento también está en el
+al `.env`. La misma plantilla sirve para desarrollo: `prepare-env.ps1` crea
+un `.env` privado con contraseñas aleatorias y un proyecto Compose distinto.
+El procedimiento también está en el
 [runbook](deploy-runbook.md).
+
+Los plugins y temas opcionales se instalan desde la administración de Moodle
+con una versión compatible. Sus archivos quedan en el volumen `moodle-code`.
