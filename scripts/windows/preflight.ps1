@@ -136,7 +136,7 @@ if ($uri.Port -lt 1 -or $uri.Port -gt 65535) { Fail 'MOODLE_WWWROOT contains an 
 
 $booleans = @{
     MOODLE_PLUGIN_INSTALL = 'true'; MOODLE_REVERSEPROXY = 'true'; MOODLE_SSLPROXY = 'false'
-    MOODLE_ROUTER_CONFIGURED = 'true'; MOODLE_REDIS_SESSIONS = 'false'
+    MOODLE_ROUTER_CONFIGURED = 'true'; MOODLE_REDIS_SESSIONS = 'true'
 }
 $booleanKeys = @($booleans.Keys)
 foreach ($key in $booleanKeys) {

@@ -11,6 +11,24 @@ foreach ($required as $extension) {
         exit(1);
     }
 }
+if (getenv('MOODLE_REDIS_SESSIONS') === 'true') {
+    if ($CFG->session_handler_class !== '\core\session\redis') {
+        fwrite(STDERR, "Moodle is not configured to store sessions in Redis.\n");
+        exit(1);
+    }
+    try {
+        $redis = new Redis();
+        $redis->connect($CFG->session_redis_host, $CFG->session_redis_port, 5);
+        $redis->select($CFG->session_redis_database);
+        if (!$redis->ping()) {
+            throw new RuntimeException('Redis did not respond to PING.');
+        }
+        $redis->close();
+    } catch (Throwable $error) {
+        fwrite(STDERR, "Redis session store is unavailable: {$error->getMessage()}\n");
+        exit(1);
+    }
+}
 $DB->get_record('course', ['id' => SITEID], '*', MUST_EXIST);
 if (!$CFG->disableupdateautodeploy) {
     // In Moodle 5.x dirroot points at the public code root where plugins live.

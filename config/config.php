@@ -56,7 +56,7 @@ $CFG->disableupdateautodeploy = !env_bool('MOODLE_PLUGIN_INSTALL', true);
 $CFG->debug = 0;
 $CFG->debugdisplay = false;
 
-if (env_bool('MOODLE_REDIS_SESSIONS', false)) {
+if (env_bool('MOODLE_REDIS_SESSIONS', true)) {
     $CFG->session_handler_class = '\core\session\redis';
     $CFG->session_redis_host = env_value('MOODLE_REDIS_HOST', 'redis');
     $CFG->session_redis_port = (int)env_value('MOODLE_REDIS_PORT', '6379');

@@ -13,7 +13,7 @@ La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
 | `app` | Moodle con PHP-FPM. Ejecuta la aplicación y se conecta a PostgreSQL y Redis. |
 | `cron` | Ejecuta las tareas programadas de Moodle usando la misma imagen de `app`. |
 | `db` | PostgreSQL 16. Guarda la base de datos en el volumen `postgres-data`. |
-| `redis` | Redis disponible para sesiones; el ejemplo lo deja desactivado inicialmente. |
+| `redis` | Guarda las sesiones de Moodle en memoria. |
 | `code-init` | Copia el código verificado de Moodle al volumen compartido la primera vez y termina. |
 
 Compose crea dos redes de tipo `bridge`: `application` conecta `web` con
@@ -52,6 +52,10 @@ usarse en un entorno de prueba que se quiera reiniciar. En producción,
 respaldar la base de datos, `moodledata` y el código compartido antes de
 cualquier cambio que afecte los volúmenes. El prefijo de sus nombres cambia si se modifica
 `COMPOSE_PROJECT_NAME`.
+
+Las sesiones en Redis son temporales: al reiniciar Redis, los usuarios deberán
+iniciar sesión de nuevo. Los cursos, usuarios y archivos permanecen en
+PostgreSQL y `moodledata`.
 
 Nginx del host recibe HTTPS y reenvía a `web` por `127.0.0.1:18080`; su
 configuración activa vive fuera de este repositorio.
