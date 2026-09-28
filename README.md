@@ -1,66 +1,72 @@
 # Moodle 5.2.3 con Docker
 
-Repositorio para instalar Moodle 5.2.3 desde cero con Docker Compose. Incluye
-Nginx, PHP-FPM, PostgreSQL, Redis y el proceso programado de Moodle. Las
-versiones y referencias de las imágenes están fijadas en
-`releases/release.env`.
+Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.3 con
+Docker Compose. `compose.yaml` define los contenedores; `Dockerfile` construye
+las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
+La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
 
-La guía paso a paso, los requisitos y las opciones de configuración están en
-**[deploy-runbook.md](deploy-runbook.md)**.
+## Qué contiene el stack
 
-## Organización del trabajo
+| Componente | Función |
+| --- | --- |
+| `web` | Nginx dentro de Docker. Recibe las peticiones y sirve los archivos públicos de Moodle. |
+| `app` | Moodle con PHP-FPM. Ejecuta la aplicación y se conecta a PostgreSQL y Redis. |
+| `cron` | Ejecuta las tareas programadas de Moodle usando la misma imagen de `app`. |
+| `db` | PostgreSQL 16. Guarda la base de datos en el volumen `postgres-data`. |
+| `redis` | Redis disponible para sesiones; el ejemplo lo deja desactivado inicialmente. |
+| `code-init` | Copia el código verificado de Moodle al volumen compartido la primera vez y termina. |
 
-En el equipo Windows se usan dos carpetas:
+Compose crea dos redes de tipo `bridge`: `application` conecta `web` con
+`app`, mientras que `data` conecta `app` y `cron` con PostgreSQL y Redis.
+La red `data` es interna; la base de datos y Redis no publican puertos en el
+servidor. Solo `web` publica el puerto configurado para el proxy del host.
+
+## Estructura esperada en el servidor
 
 ```text
-D:\Servidor\Moodle_5.2.3_Dock\
-├── produccion\   ← repositorio principal; aquí se editan y publican cambios
-└── dev\          ← clon de GitHub para probar la revisión publicada
+/srv/plataforma/moodle/          ← clon de este repositorio
+├── compose.yaml
+├── Dockerfile
+├── .env                     ← configuración privada creada desde .env.example
+├── .env.example
+├── config/                  ← configuración de Moodle
+├── docker/                  ← archivos para construir las imágenes
+├── releases/release.env     ← versiones fijadas
+├── scripts/                 ← instalación, comprobaciones y respaldos
+└── deploy/                  ← ejemplo de configuración del Nginx del host
+
+Docker, fuera del repositorio:
+├── lms-moodle_postgres-data  ← base de datos
+├── lms-moodle_moodledata     ← archivos subidos a Moodle
+└── lms-moodle_moodle-code    ← código compartido y plugins instalados
 ```
 
-GitHub `main` es la fuente de la revisión que se prueba y se despliega. El
-clon `dev` puede recrearse desde GitHub; su archivo de entorno privado no se
-publica. Las guías antiguas se guardan fuera del repositorio, en
-`D:\Servidor\documentacion general\Moodle`.
+Los nombres de los volúmenes llevan el prefijo indicado por
+`COMPOSE_PROJECT_NAME` en el `.env`. Nginx del host recibe HTTPS y reenvía a
+`web` por `127.0.0.1:18080`; su configuración activa vive fuera de este
+repositorio.
 
-## Prueba local en Windows
+## Crear el archivo `.env`
 
-Requiere Docker Desktop con contenedores Linux, Git y PowerShell. Dentro del
-clon `dev`:
-
-```powershell
-.\scripts\windows\prepare-env.ps1
-# Revisar environments/local.env y cambiar MOODLE_ADMIN_EMAIL.
-.\scripts\windows\preflight.ps1 -EnvFile environments/local.env
-.\scripts\windows\install.ps1 -EnvFile environments/local.env
-.\scripts\windows\smoke-test.ps1 -EnvFile environments/local.env
-```
-
-La URL de prueba es `http://localhost:18080`. `install.ps1` instala una base
-nueva. Para volver a empezar con datos vacíos, seguir el procedimiento de
-limpieza de [deploy-runbook.md](deploy-runbook.md) antes de reinstalar.
-
-## Despliegue en Ubuntu
-
-Clonar `main` en `/srv/plataforma/moodle`, copiar `.env.example` a `.env`
-y completar las contraseñas, la identidad del sitio, el correo del administrador
-y la URL pública. Preparar Nginx y el certificado de esa URL antes de abrir el
-sitio. Después:
+En Ubuntu, desde la raíz del clon:
 
 ```bash
-sh ./scripts/preflight.sh
-sh ./scripts/install.sh
-sh ./scripts/smoke-test.sh
+cp .env.example .env
+chmod 600 .env
+nano .env
 ```
 
-El archivo `.env` no se sube a Git. La base de datos, `moodledata` y el código
-compartido viven en volúmenes Docker; hacer copias de seguridad antes de
-actualizar o retirar esos volúmenes. `scripts/backup.sh` crea una copia local
-que también debe guardarse fuera del servidor.
+Sustituye los valores de ejemplo antes de instalar:
 
-## Estado verificado
+- `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: dos contraseñas fuertes y distintas.
+- `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`: identidad y correo reales del sitio.
+- `MOODLE_WWWROOT`: URL pública definitiva de Moodle. El valor `localhost` del ejemplo es solo para pruebas locales.
+- `MOODLE_HTTP_BIND=127.0.0.1` y `MOODLE_HTTP_PORT=18080` cuando Nginx del host actúa como proxy.
+- `MOODLE_SSLPROXY=true` si la URL pública usa HTTPS detrás de ese proxy. Mantén `MOODLE_REVERSEPROXY=true`.
+- `COMPOSE_PROJECT_NAME=lms-moodle` para dar un nombre propio a contenedores, redes y volúmenes.
 
-La revisión publicada se instaló desde cero en el clon de Windows. La prueba
-confirmó Moodle 5.2.3, PostgreSQL, Redis, permisos de plugins y respuesta HTTP
-200 en la página de acceso. El entorno de prueba se retiró después; este
-repositorio aún no está desplegado en producción.
+El `.env` contiene credenciales y está excluido de Git. Los valores de
+`releases/release.env` pertenecen a la versión del repositorio y no se copian
+al `.env`. Para crear el entorno de prueba en Windows se usa
+`environments/local.env.example`; el procedimiento también está en el
+[runbook](deploy-runbook.md).
