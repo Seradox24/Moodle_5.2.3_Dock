@@ -35,16 +35,27 @@ servidor. Solo `web` publica el puerto configurado para el proxy del host.
 ├── scripts/                 ← instalación, comprobaciones y respaldos
 └── deploy/                  ← ejemplo de configuración del Nginx del host
 
-Docker, fuera del repositorio:
-├── lms-moodle_postgres-data  ← base de datos
-├── lms-moodle_moodledata     ← archivos subidos a Moodle
-└── lms-moodle_moodle-code    ← código compartido y plugins instalados
 ```
 
-Los nombres de los volúmenes llevan el prefijo indicado por
-`COMPOSE_PROJECT_NAME` en el `.env`. Nginx del host recibe HTTPS y reenvía a
-`web` por `127.0.0.1:18080`; su configuración activa vive fuera de este
-repositorio.
+Compose crea tres **volúmenes administrados por Docker** al iniciar el stack.
+Son espacios de almacenamiento del servidor, no carpetas del clon de Git. Con
+`COMPOSE_PROJECT_NAME=lms-moodle`, sus nombres y contenidos son:
+
+| Volumen | Qué conserva |
+| --- | --- |
+| `lms-moodle_postgres-data` | Las tablas, usuarios y configuración guardados en PostgreSQL. |
+| `lms-moodle_moodledata` | Los archivos que Moodle almacena fuera del código, incluidos los subidos por usuarios. |
+| `lms-moodle_moodle-code` | La copia de los archivos públicos de Moodle que comparten los contenedores, junto con los plugins y temas instalados allí. |
+
+Los volúmenes permanecen al detener o recrear contenedores. La opción
+`down -v` de Compose **también elimina esos datos**, por lo que solo debe
+usarse en un entorno de prueba que se quiera reiniciar. En producción,
+respaldar la base de datos, `moodledata` y el código compartido antes de
+cualquier cambio que afecte los volúmenes. El prefijo de sus nombres cambia si se modifica
+`COMPOSE_PROJECT_NAME`.
+
+Nginx del host recibe HTTPS y reenvía a `web` por `127.0.0.1:18080`; su
+configuración activa vive fuera de este repositorio.
 
 ## Crear el archivo `.env`
 
