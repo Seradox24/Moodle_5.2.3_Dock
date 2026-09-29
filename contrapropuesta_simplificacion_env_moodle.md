@@ -32,9 +32,11 @@ También se ejecutó una prueba con las API de Moodle, como el usuario del servi
 
 Se instaló `mod_customcert` versión `2026042005` desde Administración usando la ventana de escritura temporal. Moodle validó el ZIP y actualizó la base. Tras cerrar la ventana, las páginas del plugin respondieron HTTP 200, el código siguió en solo lectura y volvieron a pasar las pruebas de humo y de operaciones normales. El detalle y el hash del paquete están en `docs/validation-log.md`.
 
+Una prueba funcional posterior creó la actividad en un curso temporal, matriculó a un estudiante, emitió un certificado con código de verificación y generó un PDF válido. Se eliminaron la actividad, la emisión y el curso; el estudiante de prueba quedó desactivado. El resultado está en `docs/validation-log.md`.
+
 ## Pendiente para otra etapa
 
-- Probar un caso funcional completo del certificado personalizado, como crear la actividad en un curso y emitir un certificado. Esta etapa verificó instalación, persistencia, páginas y operación general del sitio.
+- Si se requiere aceptación visual, recorrer las pantallas de creación de la actividad y descarga del certificado con un usuario de prueba. La prueba funcional automatizada cubre las API que realizan esas operaciones y la generación del PDF.
 - Probar la publicación HTTPS por el dominio definitivo y ajustar el Nginx central cuando se prepare producción. Las pruebas actuales usan HTTP local por SSH.
 - Si se decide retirar las credenciales iniciales del entorno permanente de `app`, diseñar y probar un instalador temporal como cambio separado.
 - Validar los flujos de operación normal que no cubrió la prueba automatizada, como restaurar un curso desde la interfaz.
