@@ -60,6 +60,20 @@ PostgreSQL y `moodledata`.
 Nginx del host recibe HTTPS y reenvía a `web` por `127.0.0.1:18080`; su
 configuración activa vive fuera de este repositorio.
 
+> [!IMPORTANT]
+> **El límite de subida debe coincidir en ambos Nginx.** La plantilla permite
+> archivos de hasta `MOODLE_MAX_UPLOAD_MB=256` MiB y peticiones de hasta
+> `MOODLE_MAX_REQUEST_MB=300` MiB. En el bloque del Nginx central que envía
+> tráfico a Moodle, configura al menos:
+>
+> ```nginx
+> client_max_body_size 300M;
+> ```
+>
+> Si el límite del Nginx central es menor, rechazará la petición antes de que
+> llegue al contenedor. Si cambias `MOODLE_MAX_REQUEST_MB`, ajusta también este
+> valor en el Nginx central.
+
 ## Crear el archivo `.env`
 
 En Ubuntu, desde la raíz del clon:
