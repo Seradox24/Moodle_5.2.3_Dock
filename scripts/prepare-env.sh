@@ -90,6 +90,16 @@ trap 'exit 1' HUP INT TERM
         next
     }
     $0 == "IMAGE_NAMESPACE=lms" { print "IMAGE_NAMESPACE=lmsdev"; next }
+    $0 == "MOODLE_WWWROOT=https://147.93.132.78" {
+        print "MOODLE_WWWROOT=http://localhost:18080"
+        url_found = 1
+        next
+    }
+    $0 == "MOODLE_SSLPROXY=true" {
+        print "MOODLE_SSLPROXY=false"
+        ssl_found = 1
+        next
+    }
     $0 == "POSTGRES_PASSWORD=CHANGE_ME_STRONG_DB_PASSWORD" {
         print "POSTGRES_PASSWORD=" db_password
         db_found = 1
@@ -101,7 +111,7 @@ trap 'exit 1' HUP INT TERM
         next
     }
     { print }
-    END { if (!project_found || !db_found || !admin_found) exit 1 }
+    END { if (!project_found || !url_found || !ssl_found || !db_found || !admin_found) exit 1 }
 ' > "$tmp" || { echo "ERROR: could not prepare the private environment file." >&2; exit 1; }
 
 chmod 600 "$tmp"

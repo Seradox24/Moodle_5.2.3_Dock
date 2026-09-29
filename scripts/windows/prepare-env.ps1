@@ -18,12 +18,16 @@ if ($ProjectName -notmatch '^[a-z0-9][a-z0-9_-]{0,62}$') {
 
 $content = [IO.File]::ReadAllText($example)
 $projectMarker = 'COMPOSE_PROJECT_NAME=lms-moodle'
+$urlMarker = 'MOODLE_WWWROOT=https://147.93.132.78'
+$sslMarker = 'MOODLE_SSLPROXY=true'
 $dbMarker = 'POSTGRES_PASSWORD=CHANGE_ME_STRONG_DB_PASSWORD'
 $adminMarker = 'MOODLE_ADMIN_PASSWORD=CHANGE_ME_STRONG_ADMIN_PASSWORD'
 if ([regex]::Matches($content, [regex]::Escape($projectMarker)).Count -ne 1 -or
+    [regex]::Matches($content, [regex]::Escape($urlMarker)).Count -ne 1 -or
+    [regex]::Matches($content, [regex]::Escape($sslMarker)).Count -ne 1 -or
     [regex]::Matches($content, [regex]::Escape($dbMarker)).Count -ne 1 -or
     [regex]::Matches($content, [regex]::Escape($adminMarker)).Count -ne 1) {
-    throw '.env.example must contain one project marker and one marker for each generated password.'
+    throw '.env.example is missing required production profile markers.'
 }
 
 $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
@@ -36,7 +40,7 @@ try {
 finally { $rng.Dispose() }
 $dbPassword = [Convert]::ToBase64String($dbBytes)
 $adminPassword = [Convert]::ToBase64String($adminBytes)
-$content = $content.Replace($projectMarker, "COMPOSE_PROJECT_NAME=$ProjectName").Replace('IMAGE_NAMESPACE=lms', 'IMAGE_NAMESPACE=lmsdev').Replace($dbMarker, "POSTGRES_PASSWORD=$dbPassword").Replace($adminMarker, "MOODLE_ADMIN_PASSWORD=$adminPassword")
+$content = $content.Replace($projectMarker, "COMPOSE_PROJECT_NAME=$ProjectName").Replace('IMAGE_NAMESPACE=lms', 'IMAGE_NAMESPACE=lmsdev').Replace($urlMarker, 'MOODLE_WWWROOT=http://localhost:18080').Replace($sslMarker, 'MOODLE_SSLPROXY=false').Replace($dbMarker, "POSTGRES_PASSWORD=$dbPassword").Replace($adminMarker, "MOODLE_ADMIN_PASSWORD=$adminPassword")
 $encoding = [Text.UTF8Encoding]::new($false)
 $bytes = $encoding.GetBytes($content)
 
