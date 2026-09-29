@@ -21,6 +21,13 @@ Compose crea dos redes de tipo `bridge`: `application` conecta `web` con
 La red `data` es interna; la base de datos y Redis no publican puertos en el
 servidor. Solo `web` publica el puerto configurado para el proxy del host.
 
+> [!IMPORTANT]
+> **Redis no tiene contraseña en esta configuración.** Solo se conecta a la red
+> interna `data` y no publica el puerto `6379` en el host. Conserva ambas
+> condiciones: no agregues `ports:` al servicio `redis` ni lo conectes a una
+> red accesible desde otros proyectos. Si necesitas acceso externo, configura
+> autenticación y revisa el aislamiento antes de exponerlo.
+
 ## Estructura esperada en el servidor
 
 ```text
