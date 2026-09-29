@@ -4,6 +4,8 @@ Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.3 con
 Docker Compose. `compose.yaml` define los contenedores; `Dockerfile` construye
 las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
 La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
+El estado para una publicación real está en
+**[docs/production-readiness.md](docs/production-readiness.md)**.
 
 ## Qué contiene el stack
 

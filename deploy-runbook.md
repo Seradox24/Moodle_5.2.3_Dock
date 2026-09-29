@@ -80,8 +80,9 @@ construir las imágenes, Nginx del host y una URL definitiva para Moodle.
 Clonar el repositorio en `/srv/plataforma/moodle`:
 
 ```bash
-git clone https://github.com/Seradox24/Moodle_5.2.3_Dock.git /srv/plataforma/moodle
+git clone --branch refactorizacion --single-branch https://github.com/Seradox24/Moodle_5.2.3_Dock.git /srv/plataforma/moodle
 cd /srv/plataforma/moodle
+git rev-parse HEAD
 cp .env.example .env
 chmod 600 .env
 ```
@@ -100,6 +101,9 @@ proyecto distinto y `http://localhost:18080`.
 La URL pública debe resolver hacia el servidor; `localhost:18080` es solo el
 destino interno del Nginx central, nunca la URL que ven los usuarios.
 Preparar DNS y certificado para el dominio elegido antes de publicar Moodle.
+La rama indicada contiene la revisión en trabajo; registrar y comprobar el
+commit aprobado antes de instalar. El archivo `.env` se crea y edita en el
+servidor. No copiar el perfil local de pruebas al sitio público.
 
 Validar e instalar:
 
@@ -114,10 +118,18 @@ sh ./scripts/backup.sh
 existente usar `sh ./scripts/start.sh`. La base de datos y `moodledata` deben
 respaldarse también fuera del servidor y restaurarse juntos. Nunca volver a
 ejecutar una instalación inicial sobre volúmenes con datos de producción.
+`backup.sh` detiene temporalmente `web`, `app` y `cron` para obtener una copia
+coherente; programarlo en una ventana de mantenimiento. El respaldo no incluye
+el `.env` privado: conservarlo por separado en un lugar seguro fuera de Git.
 
 Para publicar mediante Nginx, configurar el proxy central del servidor según
 la URL definitiva y comprobar `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
 `127.0.0.1`; PostgreSQL y Redis no publican puertos del host.
+Probar el acceso HTTPS real, el inicio de sesión, la creación y descarga de
+contenido, el correo saliente y los informes de seguridad de Moodle. Antes de
+recibir usuarios, disponer de copias externas al servidor y comprobar la
+restauración conjunta de base, `moodledata` y código con plugins. El estado de
+estas comprobaciones está en [docs/production-readiness.md](docs/production-readiness.md).
 
 ## Instalar plugins desde Administración
 

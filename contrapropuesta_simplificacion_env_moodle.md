@@ -18,7 +18,7 @@ El objetivo es instalar Moodle 5.2.3 en contenedores Docker con pocos datos obli
 | Arranque | El arranque ordinario no vuelve a instalar la base de datos. |
 | Código y plugins | `app`, `web` y `cron` montan el código en solo lectura durante la operación normal. `compose.plugins.yaml` abre temporalmente escritura para `app` y habilita la instalación desde Administración; al cerrarlo vuelve el modo normal. Los plugins persisten en `moodle-code`. |
 | Datos de Moodle | La base PostgreSQL y `moodledata` permanecen escribibles. La protección del código no bloquea crear usuarios o cursos ni subir contenido. |
-| Respaldo | El runbook describe respaldo y recuperación. Los resultados privados del servidor se guardan en `test-runs/`, fuera de Git. |
+| Respaldo | El script genera un respaldo consistente de base, `moodledata` y código con plugins. Falta ensayar la restauración completa y guardar copias externas antes de producción. Los resultados privados del servidor se guardan en `test-runs/`, fuera de Git. |
 
 Las credenciales iniciales siguen disponibles en el entorno de `app` durante esta etapa. Extraerlas a un servicio instalador temporal sería una mejora posterior y no es requisito para dar por válida esta instalación simplificada.
 
