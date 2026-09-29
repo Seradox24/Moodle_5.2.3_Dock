@@ -4,6 +4,7 @@
 secrets/
 backups/
 logs/
+test-runs/
 *.dump
 *.sql
 *.tar

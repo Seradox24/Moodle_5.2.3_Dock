@@ -1,0 +1,12 @@
+# Usar solo durante una ventana de instalación de plugins desde Moodle.
+services:
+  app:
+    environment:
+      MOODLE_PLUGIN_INSTALL: "true"
+    volumes:
+      - type: volume
+        source: moodle-code
+        target: /var/www/moodle/public
+        read_only: false
+        volume:
+          nocopy: true

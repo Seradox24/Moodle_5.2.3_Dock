@@ -30,13 +30,12 @@ if (getenv('MOODLE_REDIS_SESSIONS') === 'true') {
     }
 }
 $DB->get_record('course', ['id' => SITEID], '*', MUST_EXIST);
-if (!$CFG->disableupdateautodeploy) {
-    // In Moodle 5.x dirroot points at the public code root where plugins live.
-    foreach (['theme', 'mod', 'local', 'admin/tool'] as $directory) {
-        if (!is_writable($CFG->dirroot . '/' . $directory)) {
-            fwrite(STDERR, "Plugin directory is not writable: {$directory}\n");
-            exit(1);
-        }
+// In Moodle 5.x dirroot points at the public code root where plugins live.
+foreach (['theme', 'mod', 'local', 'admin/tool'] as $directory) {
+    $writable = is_writable($CFG->dirroot . '/' . $directory);
+    if ($writable === $CFG->disableupdateautodeploy) {
+        fwrite(STDERR, "Plugin directory permissions do not match the selected mode: {$directory}\n");
+        exit(1);
     }
 }
 echo "Database, PHP extensions and plugin permissions OK.\n";

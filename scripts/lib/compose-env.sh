@@ -64,11 +64,11 @@ compose_init() {
     COMPOSE_RESOLVED_ENV=$(docker compose --project-directory "$COMPOSE_REPO_ROOT" --file "$env_model" --env-file "$COMPOSE_ENV_FILE" --env-file "$COMPOSE_RELEASE_FILE" config --environment) || return 1
 
     project=$(compose_env_value COMPOSE_PROJECT_NAME lms-moodle)
-    url=$(compose_env_value MOODLE_WWWROOT http://localhost:18080)
+    url=$(compose_env_value MOODLE_WWWROOT '')
     launcher=$(compose_env_value LAUNCHER_VERSION unknown)
     moodle=$(compose_env_value MOODLE_VERSION unknown)
     project=${project:-lms-moodle}
-    url=${url:-http://localhost:18080}
+    url=${url:-missing}
     display_url=$(printf '%s' "$url" | sed -E 's#^(https?://)[^/@]+@#\1[redacted]@#')
     if [ "${2:-}" != quiet ]; then
         printf 'Environment file: %s\nProject: %s\nLauncher: %s\nMoodle: %s\nURL: %s\n' "$COMPOSE_ENV_FILE" "$project" "$launcher" "$moodle" "$display_url"

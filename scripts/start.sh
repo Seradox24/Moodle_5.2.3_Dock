@@ -19,6 +19,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 compose_init "$env_file"
+sh ./scripts/preflight.sh --env-file "$COMPOSE_ENV_FILE" --config-only
 echo "Starting the selected project (no database installer)..."
 compose up -d --wait
 echo "Start completed."

@@ -96,16 +96,17 @@ Sustituye los valores de ejemplo antes de instalar:
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: dos contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`: identidad y correo reales del sitio.
 - `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central. Es la dirección que usará Moodle en sus enlaces, aunque Nginx se conecte al contenedor por localhost.
-- `MOODLE_HTTP_BIND=127.0.0.1` y `MOODLE_HTTP_PORT=18080` cuando Nginx del host actúa como proxy.
-- `MOODLE_SSLPROXY=true` porque Nginx termina HTTPS. Mantén `MOODLE_REVERSEPROXY=true`.
-- `COMPOSE_PROJECT_NAME=lms-moodle` para dar un nombre propio a contenedores, redes y volúmenes.
+- El puerto local `127.0.0.1:18080` y los ajustes del proxy ya están fijados en Compose para producción.
 
 El `.env` contiene credenciales y está excluido de Git. Los valores de
 `releases/release.env` pertenecen a la versión del repositorio y no se copian
-al `.env`. La misma plantilla sirve para desarrollo: `prepare-env.ps1` crea
-un `.env` privado con contraseñas aleatorias y un proyecto Compose distinto.
+al `.env`. En desarrollo local sobre Windows, crear `.env` manualmente desde
+`.env.example`, con un proyecto Compose distinto y la URL local. La instalación
+asistida con `scripts/install.sh` se mantiene en Linux; Windows usa los comandos
+Docker Compose indicados en el runbook.
 El procedimiento también está en el
 [runbook](deploy-runbook.md).
 
-Los plugins y temas opcionales se instalan desde la administración de Moodle
-con una versión compatible. Sus archivos quedan en el volumen `moodle-code`.
+En operación normal, Moodle solo lee el código. Para instalar plugins desde
+Administración se abre temporalmente el modo de escritura descrito en el
+[runbook](deploy-runbook.md); los plugins quedan en `moodle-code`.

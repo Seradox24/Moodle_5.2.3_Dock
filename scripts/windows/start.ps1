@@ -1,5 +1,4 @@
-# Starts an existing installation. Never runs the database installer; use
-# install.ps1 for a new project.
+# Starts an existing installation. For a new project, see deploy-runbook.md.
 param([string]$EnvFile = '.env')
 $ErrorActionPreference = 'Stop'
 

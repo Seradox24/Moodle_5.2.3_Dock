@@ -21,11 +21,11 @@ x-moodle-runtime-environment: &moodle-runtime-environment
   POSTGRES_USER: ${POSTGRES_USER:-moodle}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the selected environment file}
   MOODLE_DB_PREFIX: ${MOODLE_DB_PREFIX:-mdl_}
-  MOODLE_WWWROOT: ${MOODLE_WWWROOT:-http://localhost:18080}
-  MOODLE_REVERSEPROXY: ${MOODLE_REVERSEPROXY:-true}
-  MOODLE_SSLPROXY: ${MOODLE_SSLPROXY:-false}
+  MOODLE_WWWROOT: ${MOODLE_WWWROOT:?Set MOODLE_WWWROOT in the selected environment file}
+  MOODLE_REVERSEPROXY: ${MOODLE_REVERSEPROXY:-false}
+  MOODLE_SSLPROXY: ${MOODLE_SSLPROXY:-true}
   MOODLE_ROUTER_CONFIGURED: ${MOODLE_ROUTER_CONFIGURED:-true}
-  MOODLE_PLUGIN_INSTALL: ${MOODLE_PLUGIN_INSTALL:-true}
+  MOODLE_PLUGIN_INSTALL: "false"
   MOODLE_REDIS_SESSIONS: ${MOODLE_REDIS_SESSIONS:-true}
   MOODLE_REDIS_HOST: ${MOODLE_REDIS_HOST:-redis}
   MOODLE_REDIS_PORT: ${MOODLE_REDIS_PORT:-6379}
@@ -70,7 +70,7 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "${MOODLE_HTTP_BIND:-127.0.0.1}:${MOODLE_HTTP_PORT:-18080}:80"
+      - "127.0.0.1:18080:80"
     volumes:
       - type: volume
         source: moodle-code
@@ -124,6 +124,7 @@ services:
       - type: volume
         source: moodle-code
         target: /var/www/moodle/public
+        read_only: true
         volume:
           nocopy: true
     networks:

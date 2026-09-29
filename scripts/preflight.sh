@@ -62,7 +62,7 @@ $audit_output
 EOF
 
 missing=""
-for key in MOODLE_WWWROOT POSTGRES_PASSWORD MOODLE_ADMIN_PASSWORD MOODLE_ADMIN_USER MOODLE_ADMIN_EMAIL MOODLE_SITE_FULLNAME MOODLE_SITE_SHORTNAME; do
+for key in MOODLE_WWWROOT POSTGRES_PASSWORD MOODLE_ADMIN_PASSWORD MOODLE_ADMIN_EMAIL MOODLE_SITE_FULLNAME MOODLE_SITE_SHORTNAME; do
     current="$(value "$key")"
     case "$current" in
         ''|*CHANGE_ME_*|*example.com*) missing="$missing $key" ;;
@@ -84,15 +84,14 @@ esac
 
 port="$(value MOODLE_HTTP_PORT 18080)"
 valid_port "$port" || fail "MOODLE_HTTP_PORT must be an integer from 1 to 65535."
+[ "$port" = 18080 ] || fail "MOODLE_HTTP_PORT is fixed at 18080 in this stack."
 bind="$(value MOODLE_HTTP_BIND 127.0.0.1)"
 valid_ipv4() {
     [ "$1" = 0.0.0.0 ] && return 0
     printf '%s\n' "$1" | awk -F. 'NF != 4 {exit 1} {for (i = 1; i <= 4; i++) if ($i !~ /^[0-9][0-9]?[0-9]?$/ || $i + 0 > 255) exit 1}'
 }
 valid_ipv4 "$bind" || fail "MOODLE_HTTP_BIND must be 0.0.0.0, 127.0.0.1 or a valid IPv4 address."
-case "$bind" in
-    127.*) [ "$bind" = 127.0.0.1 ] || fail "Only 127.0.0.1 is supported as a loopback bind address." ;;
-esac
+[ "$bind" = 127.0.0.1 ] || fail "MOODLE_HTTP_BIND is fixed at 127.0.0.1 in this stack."
 
 url="$(value MOODLE_WWWROOT)"
 if ! url_parts=$(printf '%s\n' "$url" | awk -f ./scripts/lib/validate-wwwroot.awk); then
@@ -115,29 +114,23 @@ for key in MOODLE_PLUGIN_INSTALL MOODLE_REVERSEPROXY MOODLE_SSLPROXY MOODLE_ROUT
     esac
 done
 
-[ "$(value MOODLE_REVERSEPROXY true)" = true ] || fail "MOODLE_REVERSEPROXY must be true for the published internal Nginx port."
 [ "$(value MOODLE_ROUTER_CONFIGURED true)" = true ] || fail "MOODLE_ROUTER_CONFIGURED must remain true for the internal Nginx r.php fallback."
-sslproxy="$(value MOODLE_SSLPROXY false)"
+if compose_env_has MOODLE_PLUGIN_INSTALL; then
+    [ "$(value MOODLE_PLUGIN_INSTALL)" = false ] || fail "MOODLE_PLUGIN_INSTALL is disabled in normal operation. Use compose.plugins.yaml for a plugin installation window."
+fi
+sslproxy="$(value MOODLE_SSLPROXY true)"
+reverseproxy="$(value MOODLE_REVERSEPROXY false)"
 if [ "$sslproxy" = true ]; then
     [ "$url_scheme" = https ] || fail "MOODLE_SSLPROXY=true requires an https:// MOODLE_WWWROOT."
-    [ "$bind" = 127.0.0.1 ] || fail "MOODLE_SSLPROXY=true requires MOODLE_HTTP_BIND=127.0.0.1 so the internal web port is not exposed on the LAN."
+    [ "$reverseproxy" = false ] || fail "HTTPS with the public Host preserved requires MOODLE_REVERSEPROXY=false."
+    [ "$url_port" -eq 443 ] || fail "Production MOODLE_WWWROOT must use standard HTTPS port 443."
 else
     [ "$url_scheme" = http ] || fail "An https:// MOODLE_WWWROOT requires MOODLE_SSLPROXY=true."
     [ "$url_port" -eq "$port" ] || fail "For direct HTTP access, the MOODLE_WWWROOT port must match MOODLE_HTTP_PORT."
+    [ "$reverseproxy" = true ] || fail "Local HTTP on port 18080 requires MOODLE_REVERSEPROXY=true."
+    { [ "$url_host" = localhost ] || [ "$url_host" = 127.0.0.1 ]; } || fail "Direct HTTP is only supported locally."
 fi
 
-if [ "$sslproxy" = false ] && [ "$bind" = 127.0.0.1 ] && [ "$url_host" != localhost ] && [ "$url_host" != 127.0.0.1 ]; then
-    fail "A loopback-only MOODLE_HTTP_BIND requires a local MOODLE_WWWROOT unless SSL terminates at the central proxy."
-fi
-if [ "$sslproxy" = false ] && [ "$bind" != 127.0.0.1 ] && [ "$bind" != 0.0.0.0 ] && { [ "$url_host" = localhost ] || [ "$url_host" = 127.0.0.1 ]; }; then
-    fail "A localhost MOODLE_WWWROOT cannot use a LAN-only MOODLE_HTTP_BIND."
-fi
-if [ "$sslproxy" = false ] && [ "$bind" != 0.0.0.0 ] && printf '%s\n' "$url_host" | grep -Eq '^[0-9]+(\.[0-9]+){3}$' && [ "$bind" != "$url_host" ]; then
-    fail "MOODLE_HTTP_BIND and the IPv4 host in MOODLE_WWWROOT must match for direct access."
-fi
-if [ "$bind" = 0.0.0.0 ] && [ "$url_host" = localhost ]; then
-    echo "WARNING: MOODLE_WWWROOT=localhost is only suitable for clients on the server; use its LAN IP for remote access." >&2
-fi
 
 db_name="$(value POSTGRES_DB moodle)"
 db_user="$(value POSTGRES_USER moodle)"
@@ -171,8 +164,11 @@ email="$(value MOODLE_ADMIN_EMAIL)"
 printf '%s\n' "$email" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' || fail "MOODLE_ADMIN_EMAIL must be a valid email address."
 for key in MOODLE_ADMIN_USER MOODLE_SITE_FULLNAME MOODLE_SITE_SHORTNAME; do
     current="$(value "$key" '')"
+    if [ "$key" = MOODLE_ADMIN_USER ] && ! compose_env_has "$key"; then
+        current=admin
+    fi
     case "$current" in
-        ''|*[![:space:]]*) ;;
+        *[![:space:]]*) ;;
         *) fail "$key must not be empty or whitespace-only." ;;
     esac
 done
@@ -213,7 +209,7 @@ running_services="$(compose ps --status running --services)" || fail "Cannot ins
 
 if command -v ss >/dev/null 2>&1; then
     if ! printf '%s\n' "$running_services" | grep -qx web && ss -ltn | awk '{print $4}' | grep -Eq ":${port}$"; then
-        fail "Host port ${port} is already in use outside project $project. Choose another MOODLE_HTTP_PORT."
+        fail "Host port ${port} is already in use outside project $project. Free the port before starting Moodle."
     fi
 fi
 

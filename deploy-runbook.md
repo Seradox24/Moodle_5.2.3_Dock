@@ -1,9 +1,9 @@
 # Moodle 5.2.3: despliegue y pruebas
 
-Este repositorio contiene el despliegue Docker de Moodle. `produccion` es la
-única carpeta donde se editan y publican cambios. `dev` es un clon descartable
-del repositorio de GitHub para pruebas en Windows. La documentación histórica
-está en `D:\Servidor\documentacion general\Moodle`, fuera de Git.
+Este repositorio contiene el despliegue Docker de Moodle. Los cambios se
+preparan en `dev`, rama `refactorizacion`; `produccion` no se modifica durante
+este trabajo. La documentación histórica está en
+`D:\Servidor\documentacion general\Moodle`, fuera de Git.
 
 ## Archivos necesarios
 
@@ -20,31 +20,58 @@ código compartido; `docker compose down -v` los elimina.
 ## Desarrollo local en Windows
 
 Requisitos: Docker Desktop con motor Linux, Git y PowerShell. Desde
-`D:\Servidor\Moodle_5.2.3_Dock`:
+`D:\Servidor\Moodle_5.2.3_Dock\dev`:
 
 ```powershell
-git clone https://github.com/Seradox24/Moodle_5.2.3_Dock.git dev
-Set-Location dev
-.\scripts\windows\prepare-env.ps1
+Copy-Item .env.example .env
+notepad .env
 ```
 
-El último comando crea `.env` con contraseñas aleatorias.
-Antes de instalar, cambiar `MOODLE_ADMIN_EMAIL` por un correo propio y revisar
-`MOODLE_WWWROOT=http://localhost:18080` y
-`COMPOSE_PROJECT_NAME=lms-moodle-dev`. Después:
+Este `.env` de prueba se completa manualmente. Usar contraseñas privadas y
+diferentes, un correo propio y los valores siguientes para aislar los datos de
+producción y acceder localmente:
+
+```dotenv
+COMPOSE_PROJECT_NAME=lms-moodle-dev
+IMAGE_NAMESPACE=lmsdev
+MOODLE_WWWROOT=http://localhost:18080
+MOODLE_SSLPROXY=false
+MOODLE_REVERSEPROXY=true
+```
+
+Antes de crear datos, confirmar que no hay contenedores ni volúmenes del
+proyecto `lms-moodle-dev`. Estos comandos deben devolver listas vacías:
 
 ```powershell
-.\scripts\windows\preflight.ps1 -EnvFile .env -ConfigOnly
-.\scripts\windows\install.ps1 -EnvFile .env
+docker ps -a --filter 'label=com.docker.compose.project=lms-moodle-dev' --format '{{.Names}}'
+docker volume ls --filter 'label=com.docker.compose.project=lms-moodle-dev' --format '{{.Name}}'
+```
+
+Si aparece algún recurso, se trata de una instalación existente o incompleta;
+revisarlo antes de continuar. Comprobar también que el puerto local 18080 esté
+libre. El script `scripts/windows/clean-project.ps1` permite limpiar un
+proyecto de prueba después de revisar sus opciones.
+
+Desde PowerShell, en la raíz del clon, ejecutar la instalación inicial con
+los mismos servicios y el mismo instalador de Moodle que usa Linux:
+
+```powershell
+function Invoke-MoodleCompose {
+    docker compose --env-file .env --env-file releases/release.env @args
+    if ($LASTEXITCODE -ne 0) { throw "Falló Docker Compose: $($args -join ' ')" }
+}
+Invoke-MoodleCompose config --quiet
+Invoke-MoodleCompose build
+Invoke-MoodleCompose up -d db redis
+Invoke-MoodleCompose up -d --wait app
+Invoke-MoodleCompose exec -T --user www-data app sh /usr/local/bin/install-database.sh
+Invoke-MoodleCompose up -d --wait web cron
 .\scripts\windows\smoke-test.ps1 -EnvFile .env
 ```
 
-Abrir `http://localhost:18080`. Para probar una revisión nueva, editar y
-publicar en `produccion`, bajar el stack de `dev` y clonar de nuevo la
-revisión publicada. Una instalación totalmente nueva también requiere retirar
-los volúmenes de prueba; guardar antes lo que se necesite. El script
-`scripts/windows/clean-project.ps1` permite hacer esa limpieza tras revisar
-sus opciones.
+Ejecutar la instalación de base de datos una sola vez por proyecto nuevo.
+Abrir `http://localhost:18080`. Para un proyecto que ya tiene datos, usar
+`.\scripts\windows\start.ps1 -EnvFile .env`, sin repetir el instalador.
 
 ## Producción en Ubuntu
 
@@ -64,10 +91,11 @@ Editar `.env` y completar al menos:
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`.
 - `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central, por ejemplo `https://moodle.tudominio.cl`.
-- `MOODLE_HTTP_BIND=127.0.0.1` y `MOODLE_HTTP_PORT=18080` si Nginx sirve la URL.
-- `MOODLE_SSLPROXY=true` cuando Nginx termina HTTPS.
-- `COMPOSE_PROJECT_NAME=lms-moodle` para aislar este stack.
-- `MOODLE_REDIS_SESSIONS=true` para guardar las sesiones en Redis.
+
+Compose fija el puerto `127.0.0.1:18080` y los valores de proxy, Redis y
+proyecto para producción. No agregarlos al `.env` salvo una excepción
+documentada. El entorno local generado con `sh scripts/prepare-env.sh` usa un
+proyecto distinto y `http://localhost:18080`.
 
 La URL pública debe resolver hacia el servidor; `localhost:18080` es solo el
 destino interno del Nginx central, nunca la URL que ven los usuarios.
@@ -91,12 +119,43 @@ Para publicar mediante Nginx, configurar el proxy central del servidor según
 la URL definitiva y comprobar `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
 `127.0.0.1`; PostgreSQL y Redis no publican puertos del host.
 
-## Flujo único de cambios
+## Instalar plugins desde Administración
 
-1. Modificar archivos únicamente en `produccion`.
-2. Revisar y validar la configuración, luego confirmar y subir a GitHub.
-3. En `dev`, recrear el clon desde GitHub y repetir la instalación de prueba.
-4. Tras aprobar la prueba, desplegar exactamente la revisión publicada.
+En operación normal `app`, `web` y `cron` leen `moodle-code` sin permiso de
+escritura. Para instalar un plugin compatible con Moodle 5.2.3, probarlo primero
+en desarrollo y respaldar base, `moodledata` y código. Abrir la ventana solo el
+tiempo necesario. Desde la raíz del clon, con el `.env` seleccionado:
 
-No copiar cambios de `dev` hacia producción. Si una prueba revela un
-problema, corregirlo en `produccion` y volver a crear el clon de prueba.
+```bash
+docker compose -f compose.yaml -f compose.plugins.yaml --env-file .env --env-file releases/release.env up -d --no-deps --force-recreate app
+docker compose -f compose.yaml -f compose.plugins.yaml --env-file .env --env-file releases/release.env exec -T --user www-data app php /usr/local/bin/check-runtime.php
+```
+
+Instalar el ZIP desde Administración > Plugins > Instalar plugins, confirmar
+las pantallas de actualización y comprobar el sitio. Cerrar la ventana incluso
+si falla la instalación:
+
+```bash
+docker compose -f compose.yaml --env-file .env --env-file releases/release.env up -d --no-deps --force-recreate app
+docker compose -f compose.yaml --env-file .env --env-file releases/release.env exec -T --user www-data app php /usr/local/bin/check-runtime.php
+```
+
+`--no-deps` evita tocar los demás servicios. Confirmar con `docker compose ps`
+que `app` esté saludable. Los plugins persisten en el volumen `moodle-code`.
+No ejecutar `docker compose up` con `compose.plugins.yaml` como configuración
+habitual.
+
+## Pruebas en el servidor sin publicar el sitio
+
+Para una instalación desechable dentro de `/srv/plataforma/moodle`, ejecutar
+`sh scripts/prepare-env.sh`, revisar el `.env` privado y luego
+`sh scripts/install.sh`. La URL de prueba queda en `localhost:18080` y solo se
+consulta desde el servidor o por un túnel SSH. Registrar cada ciclo en
+`docs/validation-log.md`; guardar los resultados operativos sin credenciales
+en `test-runs/`, que Git ignora.
+
+## Flujo de cambios de esta rama
+
+1. Modificar y revisar en `dev`, rama `refactorizacion`.
+2. Probar una instalación local aislada; conservar sus volúmenes mientras sean útiles.
+3. Publicar y desplegar solo la revisión validada, con respaldo previo de los datos existentes.

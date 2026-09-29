@@ -42,17 +42,21 @@ $CFG->dboptions = [
     'dbport' => (int)env_value('MOODLE_DB_PORT', '5432'),
 ];
 
-$CFG->wwwroot = rtrim((string)env_value('MOODLE_WWWROOT', 'http://localhost:18080'), '/');
+$wwwroot = env_value('MOODLE_WWWROOT');
+if ($wwwroot === null) {
+    throw new RuntimeException('MOODLE_WWWROOT is required.');
+}
+$CFG->wwwroot = rtrim($wwwroot, '/');
 $CFG->dataroot = '/var/moodledata';
 $CFG->directorypermissions = 0770;
 
-$CFG->reverseproxy = env_bool('MOODLE_REVERSEPROXY', true);
-$CFG->sslproxy = env_bool('MOODLE_SSLPROXY', false);
+$CFG->reverseproxy = env_bool('MOODLE_REVERSEPROXY', false);
+$CFG->sslproxy = env_bool('MOODLE_SSLPROXY', true);
 $CFG->routerconfigured = env_bool('MOODLE_ROUTER_CONFIGURED', true);
 $CFG->slasharguments = true;
 $CFG->preventexecpath = true;
 
-$CFG->disableupdateautodeploy = !env_bool('MOODLE_PLUGIN_INSTALL', true);
+$CFG->disableupdateautodeploy = !env_bool('MOODLE_PLUGIN_INSTALL', false);
 $CFG->debug = 0;
 $CFG->debugdisplay = false;
 
