@@ -74,7 +74,7 @@ Sustituye los valores de ejemplo antes de instalar:
 
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: dos contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`: identidad y correo reales del sitio.
-- `MOODLE_WWWROOT=https://147.93.132.78` si Moodle ocupará la raíz de esa IP; cambiarla si se adopta un dominio. Es la URL pública, aunque Nginx se conecte al contenedor por localhost.
+- `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central. Es la dirección que usará Moodle en sus enlaces, aunque Nginx se conecte al contenedor por localhost.
 - `MOODLE_HTTP_BIND=127.0.0.1` y `MOODLE_HTTP_PORT=18080` cuando Nginx del host actúa como proxy.
 - `MOODLE_SSLPROXY=true` porque Nginx termina HTTPS. Mantén `MOODLE_REVERSEPROXY=true`.
 - `COMPOSE_PROJECT_NAME=lms-moodle` para dar un nombre propio a contenedores, redes y volúmenes.

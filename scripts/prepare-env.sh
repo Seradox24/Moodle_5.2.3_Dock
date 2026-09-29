@@ -90,7 +90,7 @@ trap 'exit 1' HUP INT TERM
         next
     }
     $0 == "IMAGE_NAMESPACE=lms" { print "IMAGE_NAMESPACE=lmsdev"; next }
-    $0 == "MOODLE_WWWROOT=https://147.93.132.78" {
+    $0 == "MOODLE_WWWROOT=https://moodle.example.com" {
         print "MOODLE_WWWROOT=http://localhost:18080"
         url_found = 1
         next

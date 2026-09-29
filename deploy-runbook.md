@@ -63,7 +63,7 @@ Editar `.env` y completar al menos:
 
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`.
-- `MOODLE_WWWROOT`: URL pública final. La plantilla usa `https://147.93.132.78` si Moodle ocupará la raíz de la IP.
+- `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central, por ejemplo `https://moodle.tudominio.cl`.
 - `MOODLE_HTTP_BIND=127.0.0.1` y `MOODLE_HTTP_PORT=18080` si Nginx sirve la URL.
 - `MOODLE_SSLPROXY=true` cuando Nginx termina HTTPS.
 - `COMPOSE_PROJECT_NAME=lms-moodle` para aislar este stack.
@@ -71,9 +71,7 @@ Editar `.env` y completar al menos:
 
 La URL pública debe resolver hacia el servidor; `localhost:18080` es solo el
 destino interno del Nginx central, nunca la URL que ven los usuarios.
-El certificado actual para
-`147.93.132.78` cubre esa IP, no un futuro subdominio. Preparar DNS y
-certificado para el dominio elegido antes de publicar Moodle.
+Preparar DNS y certificado para el dominio elegido antes de publicar Moodle.
 
 Validar e instalar:
 

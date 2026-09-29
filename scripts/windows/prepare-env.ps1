@@ -18,7 +18,7 @@ if ($ProjectName -notmatch '^[a-z0-9][a-z0-9_-]{0,62}$') {
 
 $content = [IO.File]::ReadAllText($example)
 $projectMarker = 'COMPOSE_PROJECT_NAME=lms-moodle'
-$urlMarker = 'MOODLE_WWWROOT=https://147.93.132.78'
+$urlMarker = 'MOODLE_WWWROOT=https://moodle.example.com'
 $sslMarker = 'MOODLE_SSLPROXY=true'
 $dbMarker = 'POSTGRES_PASSWORD=CHANGE_ME_STRONG_DB_PASSWORD'
 $adminMarker = 'MOODLE_ADMIN_PASSWORD=CHANGE_ME_STRONG_ADMIN_PASSWORD'
