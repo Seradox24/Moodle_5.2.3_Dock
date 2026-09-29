@@ -154,6 +154,12 @@ consulta desde el servidor o por un túnel SSH. Registrar cada ciclo en
 `docs/validation-log.md`; guardar los resultados operativos sin credenciales
 en `test-runs/`, que Git ignora.
 
+En un perfil con `MOODLE_WWWROOT=http://localhost:18080`, la comprobación
+`admin/cli/checks.php` ejecutada dentro de `app` no puede acceder al puerto del
+host: allí `localhost` designa al contenedor. Para esta prueba local, el smoke
+test consulta las rutas reales desde el host. En producción, con URL pública,
+volver a ejecutar las comprobaciones CLI de Moodle.
+
 ## Flujo de cambios de esta rama
 
 1. Modificar y revisar en `dev`, rama `refactorizacion`.

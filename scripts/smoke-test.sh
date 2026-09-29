@@ -43,4 +43,19 @@ status="$(curl -fsSL --connect-timeout 10 --max-time 120 --max-redirs 5 -o /dev/
 echo "Login HTTP $status ($url/login/index.php)"
 
 echo
+echo "== Moodle router =="
+check_route() {
+    path=$1
+    expected=$2
+    actual="$(curl -sS --connect-timeout 10 --max-time 30 -o /dev/null -w '%{http_code}' "$url$path")" || exit 1
+    [ "$actual" = "$expected" ] || { echo "Unexpected HTTP status for $path: $actual (expected $expected)" >&2; exit 1; }
+    echo "$path HTTP $actual"
+}
+check_route /core/check/controller/test 200
+check_route /api/rest/v2/openapi.json 200
+check_route /not/a/valid/request 404
+check_route /lib/exampleshimroute.php 302
+check_route /lib/exampleshimroute2.php 302
+
+echo
 echo "Smoke test completed."
