@@ -160,6 +160,12 @@ host: allí `localhost` designa al contenedor. Para esta prueba local, el smoke
 test consulta las rutas reales desde el host. En producción, con URL pública,
 volver a ejecutar las comprobaciones CLI de Moodle.
 
+Para comprobar que el código de solo lectura permite las funciones normales,
+ejecutar `tests/normal-operations.php` como `www-data` en `app`, enviándolo por
+entrada estándar de PHP. La prueba crea un usuario, un curso y un archivo con
+las API de Moodle; luego elimina el archivo y el curso y desactiva el usuario
+temporal. No copiar el script al contenedor: su raíz es de solo lectura.
+
 ## Flujo de cambios de esta rama
 
 1. Modificar y revisar en `dev`, rama `refactorizacion`.
