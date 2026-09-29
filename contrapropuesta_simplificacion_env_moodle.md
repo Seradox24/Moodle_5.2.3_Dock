@@ -30,9 +30,11 @@ La instalación y el reinicio posterior funcionaron con PostgreSQL, Redis, Moodl
 
 También se ejecutó una prueba con las API de Moodle, como el usuario del servicio, que creó un usuario, un curso y un archivo de contenido, leyó el archivo y limpió los datos de prueba. Esto confirma que el montaje de código en solo lectura no impide esas funciones normales. La prueba no equivale a una revisión de cada pantalla de la interfaz.
 
+Se instaló `mod_customcert` versión `2026042005` desde Administración usando la ventana de escritura temporal. Moodle validó el ZIP y actualizó la base. Tras cerrar la ventana, las páginas del plugin respondieron HTTP 200, el código siguió en solo lectura y volvieron a pasar las pruebas de humo y de operaciones normales. El detalle y el hash del paquete están en `docs/validation-log.md`.
+
 ## Pendiente para otra etapa
 
-- Elegir un plugin compatible con Moodle 5.2.3 y probar su instalación real desde Administración, incluido su funcionamiento después de cerrar la ventana de escritura.
+- Probar un caso funcional completo del certificado personalizado, como crear la actividad en un curso y emitir un certificado. Esta etapa verificó instalación, persistencia, páginas y operación general del sitio.
 - Probar la publicación HTTPS por el dominio definitivo y ajustar el Nginx central cuando se prepare producción. Las pruebas actuales usan HTTP local por SSH.
 - Si se decide retirar las credenciales iniciales del entorno permanente de `app`, diseñar y probar un instalador temporal como cambio separado.
 - Validar los flujos de operación normal que no cubrió la prueba automatizada, como restaurar un curso desde la interfaz.
