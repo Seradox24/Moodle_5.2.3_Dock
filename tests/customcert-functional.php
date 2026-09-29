@@ -14,6 +14,8 @@ if (get_config('mod_customcert', 'version') != 2026042005) {
 $token = 'certcheck' . bin2hex(random_bytes(5));
 $courseid = null;
 $userid = null;
+$certificateid = null;
+$issueid = null;
 
 try {
     $categoryid = $DB->get_field_sql('SELECT MIN(id) FROM {course_categories}');
@@ -99,6 +101,12 @@ try {
         delete_course($courseid, false);
         if ($DB->record_exists('course', ['id' => $courseid])) {
             throw new RuntimeException('Temporary course was not removed.');
+        }
+        if ($certificateid !== null && $DB->record_exists('customcert', ['id' => $certificateid])) {
+            throw new RuntimeException('Temporary certificate activity was not removed.');
+        }
+        if ($issueid !== null && $DB->record_exists('customcert_issues', ['id' => $issueid])) {
+            throw new RuntimeException('Temporary certificate issue was not removed.');
         }
     }
     if ($userid !== null) {
