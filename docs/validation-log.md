@@ -124,6 +124,28 @@ permanece fijado en 5.2.3. Los cambios se construyeron y aplicaron con
   del servidor; la documentación privada de reinstalación se conserva en el
   equipo local fuera de Git, con permisos restringidos.
 
+## Cierre de la contrapropuesta de simplificación
+
+El 30 de septiembre de 2026, tras publicar la base validada en `main`
+(`294fa6a`), el operador solicitó eliminar
+`contrapropuesta_simplificacion_env_moodle.md` y conservar su cierre en este log.
+La contrapropuesta quedó implementada: `.env` de seis campos creado manualmente
+en el servidor, instalador asistido Linux, comandos manuales para Windows,
+versiones fijadas, código en solo lectura y ventana temporal para instalar
+plugins. PostgreSQL y `moodledata` permiten las operaciones normales de Moodle.
+
+Las instalaciones limpias, el reinicio, las operaciones normales y la ventana
+de plugins tienen evidencia en los ciclos siguientes. También se completaron
+la publicación HTTPS y la restauración aislada, que el documento eliminado
+todavía indicaba como pendientes. `mod_customcert` se probó en el entorno de
+desarrollo anterior; la instalación pública limpia no incluye ese plugin.
+
+El procedimiento vigente permanece en `README.md` y `deploy-runbook.md`;
+el estado actual y los pendientes están en `docs/production-readiness.md`.
+La retirada del documento es una limpieza de documentación y no modifica
+la configuración ni el alcance de las pruebas aprobadas. El historial de Git
+conserva el contenido anterior.
+
 ## Ciclos anteriores
 
 | Fecha UTC | Commit de `refactorizacion` | Cambios y comandos principales | Pruebas y resultado | Fallos y corrección |
