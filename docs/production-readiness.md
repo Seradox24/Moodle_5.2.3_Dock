@@ -4,6 +4,11 @@ Revisión del 30 de septiembre de 2026, rama `refactorizacion`. E-learning SOM q
 
 ## Comprobado
 
+El operador autorizó publicar esta base en `main` como pseudoproducción el
+30 de septiembre de 2026. La revisión técnica final probada fue `7a8d7ef`;
+la promoción actualiza la documentación y conserva los resultados y pendientes
+de la revisión.
+
 | Área | Resultado |
 | --- | --- |
 | Revisión instalada | Instalación limpia sobre `5f6adf8`; correcciones posteriores probadas sobre `01ba777`, launcher 1.0.6 y Moodle 5.2.3. `.env` privado de seis campos con permisos `0600`. |

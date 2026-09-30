@@ -9,6 +9,16 @@ Configuración del 30 de septiembre: E-learning SOM, nombre corto SOM, correo
 fuera de Git en la documentación local de Moodle. Política de respaldos aplazada
 por decisión del operador.
 
+## Promoción a main del 30 de septiembre
+
+El operador autorizó integrar `refactorizacion` en `main` como base de
+pseudoproducción. Revisión técnica probada: `7a8d7ef`. Se comprobó que `main`
+no contiene cambios divergentes y que el árbol de trabajo está limpio.
+La guía se actualizó para clonar `main`; la promoción conserva los pendientes
+de SMTP, capacidad y selector, y la decisión de aplazar la política de respaldos.
+La integración se realiza por avance directo y conserva todo el historial.
+El servidor pasa a seguir `main` sin reinstalar la base ni recrear volúmenes.
+
 ## Cierre del 30 de septiembre: contraseña, OpenSSL y permisos
 
 Base comprobada: `c7858a2`, sin cambiar Moodle 5.2.3 ni las referencias de

@@ -1,8 +1,8 @@
 # Moodle 5.2.3: despliegue y pruebas
 
-Este repositorio contiene el despliegue Docker de Moodle. Los cambios se
-preparan en `dev`, rama `refactorizacion`; `produccion` no se modifica durante
-este trabajo. La documentación histórica está en
+Este repositorio contiene el despliegue Docker de Moodle. `main` contiene la
+base validada para pseudoproducción. Los cambios se preparan y prueban en una
+rama de desarrollo antes de integrarlos en `main`. La documentación histórica está en
 `D:\Servidor\documentacion general\Moodle`, fuera de Git.
 
 ## Archivos necesarios
@@ -80,7 +80,7 @@ construir las imágenes, Nginx del host y una URL definitiva para Moodle.
 Clonar el repositorio en `/srv/plataforma/moodle`:
 
 ```bash
-git clone --branch refactorizacion --single-branch https://github.com/Seradox24/Moodle_5.2.3_Dock.git /srv/plataforma/moodle
+git clone --branch main --single-branch https://github.com/Seradox24/Moodle_5.2.3_Dock.git /srv/plataforma/moodle
 cd /srv/plataforma/moodle
 git rev-parse HEAD
 cp .env.example .env
@@ -101,8 +101,8 @@ proyecto distinto y `http://localhost:18080`.
 La URL pública debe resolver hacia el servidor; `localhost:18080` es solo el
 destino interno del Nginx central, nunca la URL que ven los usuarios.
 Preparar DNS y certificado para el dominio elegido antes de publicar Moodle.
-La rama indicada contiene la revisión en trabajo; registrar y comprobar el
-commit aprobado antes de instalar. El archivo `.env` se crea y edita en el
+La rama `main` contiene la base validada; registrar y comprobar el commit
+seleccionado antes de instalar y revisar los pendientes documentados. El archivo `.env` se crea y edita en el
 servidor. No copiar el perfil local de pruebas al sitio público.
 
 Validar e instalar:
@@ -205,8 +205,8 @@ entrada estándar de PHP. La prueba crea un usuario, un curso y un archivo con
 las API de Moodle; luego elimina el archivo y el curso y desactiva el usuario
 temporal. No copiar el script al contenedor: su raíz es de solo lectura.
 
-## Flujo de cambios de esta rama
+## Flujo de cambios
 
 1. Modificar y revisar en `dev`, rama `refactorizacion`.
 2. Probar una instalación local aislada; conservar sus volúmenes mientras sean útiles.
-3. Publicar y desplegar solo la revisión validada, con respaldo previo de los datos existentes.
+3. Integrar la revisión validada en `main`, registrar las pruebas y desplegarla con respaldo previo de los datos existentes.
