@@ -1,8 +1,8 @@
-# Moodle 5.2.3: despliegue y pruebas
+# Moodle 5.2.3: instalación y operación en Linux
 
 Este repositorio contiene el despliegue Docker de Moodle en Linux. `main` contiene la
-base validada para pseudoproducción. Los cambios se preparan y prueban en una
-rama de desarrollo antes de integrarlos en `main`. Los registros de pruebas y
+base validada para pseudoproducción. Las versiones de Moodle y de las imágenes
+están fijadas en `releases/release.env`. Los registros de pruebas y
 el estado de preparación para producción se conservan en documentación
 operativa separada. La URL de su repositorio se añadirá cuando esté disponible.
 Las rutas de despliegue, dominios y correos mostrados son ejemplos; adaptarlos
@@ -26,9 +26,11 @@ código compartido; `docker compose down -v` los elimina.
 
 ## Producción en Ubuntu
 
-Requisitos: Docker Engine con el plugin Compose, Git, conexión de salida para
+Requisitos: Docker Engine con el plugin Compose, Git, curl, conexión de salida para
 construir las imágenes, Nginx del host y una URL definitiva para Moodle.
-Clonar el repositorio en `/srv/plataforma/moodle`:
+Instalar Docker siguiendo su [guía oficial para Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
+Comprobar que el puerto local 18080 esté libre. Clonar el repositorio en una
+carpeta vacía; los comandos usan `/srv/plataforma/moodle` como ejemplo:
 
 ```bash
 git clone --branch main --single-branch https://github.com/Seradox24/Moodle_5.2.3_Dock.git /srv/plataforma/moodle
@@ -36,18 +38,19 @@ cd /srv/plataforma/moodle
 git rev-parse HEAD
 cp .env.example .env
 chmod 600 .env
+nano .env
 ```
 
-Editar `.env` y completar al menos:
+Completar los seis campos de `.env`:
 
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`.
-- `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central, por ejemplo `https://moodle.tudominio.cl`.
+- `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central, por ejemplo `https://moodle.example.com`.
 
 Compose fija el puerto `127.0.0.1:18080` y los valores de proxy, Redis y
 proyecto para producción. No agregarlos al `.env` salvo una excepción
-documentada. El entorno local generado con `sh scripts/prepare-env.sh` usa un
-proyecto distinto y `http://localhost:18080`.
+documentada. `scripts/prepare-env.sh` genera únicamente perfiles de prueba;
+el `.env` de producción se crea y completa manualmente.
 
 La URL pública debe resolver hacia el servidor; `localhost:18080` es solo el
 destino interno del Nginx central, nunca la URL que ven los usuarios.
@@ -61,26 +64,28 @@ Validar e instalar:
 ```bash
 sh ./scripts/preflight.sh
 sh ./scripts/install.sh
-sh ./scripts/smoke-test.sh
-sh ./scripts/backup.sh
 ```
 
-Después de instalar, revisar los ajustes desde Administración. En Moodle 5.2.3,
-el acceso de la app móvil se activa por defecto si el sitio usa HTTPS; se puede
-desactivar después mediante «Habilitar servicios web para dispositivos móviles»
+El instalador construye las imágenes, inicia PostgreSQL y Redis, prepara el
+código compartido, instala la base con la CLI de Moodle e inicia web y cron.
+La comprobación HTTP se realiza después de activar el proxy HTTPS.
+
+Después de instalar y publicar por HTTPS, revisar los ajustes desde Administración.
+El usuario administrador inicial es `admin`. En Moodle 5.2.3,
+el acceso de la app móvil se activa por defecto si el sitio usa HTTPS. Para
+mantenerlo desactivado, desmarcar «Habilitar servicios web para dispositivos móviles»
 en Características avanzadas. Esto conserva el acceso desde navegadores móviles.
 Configurar el servidor SMTP, el tipo de seguridad, la autenticación, el usuario,
 la contraseña y el remitente en «Configuración de correo saliente». Guardar esas
 credenciales por separado del repositorio; los seis campos de `.env.example`
 siguen siendo los datos de instalación.
 
-`install.sh` realiza una instalación inicial; para iniciar una instalación
-existente usar `sh ./scripts/start.sh`. La base de datos y `moodledata` deben
-respaldarse también fuera del servidor y restaurarse juntos. Nunca volver a
-ejecutar una instalación inicial sobre volúmenes con datos de producción.
-`backup.sh` detiene temporalmente `web`, `app` y `cron` para obtener una copia
-coherente; programarlo en una ventana de mantenimiento. El respaldo no incluye
-el `.env` privado: conservarlo por separado en un lugar seguro fuera de Git.
+Los datos del sitio y del administrador son valores iniciales: cambiar esos
+campos en `.env` no actualiza por sí solo la cuenta ni el sitio ya instalado.
+Gestionar esos cambios desde Moodle y actualizar por separado la documentación
+privada de reinstalación.
+
+## Publicación HTTPS y comprobaciones
 
 Para publicar mediante Nginx, configurar el proxy central del servidor según
 la URL definitiva y comprobar `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
@@ -92,22 +97,77 @@ certificado con Certbot en modo `--webroot`, habilitar primero la ruta
 en el resto de rutas mostrará ese error hasta completar la instalación. Después
 de emitir el certificado, activar el bloque HTTPS con proxy a
 `http://127.0.0.1:18080`, `proxy_set_header Host $host`,
-`proxy_set_header X-Forwarded-Proto https` y el límite de carga acorde con
-Moodle. Ejecutar `nginx -t`, recargar Nginx y comprobar desde otra máquina
+`proxy_set_header X-Forwarded-Proto https` y `client_max_body_size 300M`,
+acorde con el límite de petición predeterminado de Moodle. Si se cambia
+`MOODLE_MAX_REQUEST_MB`, ajustar también el límite del Nginx central.
+Ejecutar `nginx -t`, recargar Nginx y comprobar desde otra máquina
 el inicio de sesión HTTPS y la redirección HTTP a HTTPS.
+
+Desde la raíz del clon, con la URL pública accesible:
+
+```bash
+sh ./scripts/status.sh
+sh ./scripts/release-info.sh
+sh ./scripts/smoke-test.sh
+docker compose -f compose.yaml --env-file .env --env-file releases/release.env exec -T --user www-data app php /var/www/moodle/public/admin/cli/checks.php
+```
+
+La prueba de humo verifica la base, Redis, el runtime, los permisos del código,
+el acceso HTTP y las rutas internas protegidas. Revisar también los informes
+de seguridad desde Administración.
+
 Probar el acceso HTTPS real, el inicio de sesión, la creación y descarga de
-contenido, el correo saliente y los informes de seguridad de Moodle. Antes de
-recibir usuarios, disponer de copias externas al servidor y comprobar la
+contenido con una cuenta de usuario final, el correo saliente y la recuperación
+de contraseña. El código de solo lectura protege los archivos de la aplicación;
+PostgreSQL y `moodledata` siguen permitiendo crear cursos, usuarios y contenido.
+Antes de recibir usuarios, disponer de copias externas al servidor y comprobar la
 restauración conjunta de base, `moodledata` y código con plugins. El estado de
 estas comprobaciones debe registrarse en la documentación operativa externa.
 
+## Arranque de una instalación existente
+
+```bash
+sh ./scripts/start.sh
+sh ./scripts/status.sh
+sh ./scripts/smoke-test.sh
+```
+
+`start.sh` inicia los servicios sin reinstalar la base. `install.sh` se usa
+únicamente para un proyecto nuevo. Conservar el nombre del proyecto Compose,
+los tres volúmenes y la configuración de base de datos de una instalación
+existente. Cambiar la contraseña de PostgreSQL solo en `.env` no cambia la
+contraseña del rol almacenada en la base.
+
+## Respaldo y recuperación
+
+En una ventana de mantenimiento, con los servicios activos:
+
+```bash
+sh ./scripts/backup.sh
+```
+
+El script detiene temporalmente `web`, `app` y `cron`, respalda PostgreSQL,
+`moodledata` y `moodle-code`, y vuelve a iniciar los servicios. Conserva los
+plugins y temas instalados junto con el código. El destino predeterminado es
+`backups/FECHA_HORA`; comprobar su integridad sustituyendo ese nombre por
+la carpeta indicada al terminar:
+
+```bash
+(cd backups/FECHA_HORA && sha256sum -c SHA256SUMS)
+sh ./scripts/status.sh
+sh ./scripts/smoke-test.sh
+```
+
+Guardar una copia fuera del servidor y conservar el `.env` privado por separado:
+el respaldo no lo incluye. Este procedimiento es manual; la frecuencia y
+retención se definen en la documentación operativa externa.
+
 La recuperación debe usar un proyecto Compose aislado y los tres componentes
-del mismo respaldo: base, `moodledata` y `moodle-code`. El ensayo de esta rama
-está registrado en el log de validación externo. En Compose
-5.5.1, `docker compose create app` acepta el perfil de recuperación, mientras
-que `docker compose create --no-deps app` falla porque esa opción no existe
-para `create`. El perfil aislado se limpia solo después de comprobar la base y
-los archivos recuperados. No restaurar sobre los volúmenes del sitio activo.
+del mismo respaldo: base, `moodledata` y `moodle-code`, junto con su revisión e
+imágenes correspondientes. No restaurar sobre los volúmenes del sitio activo.
+El procedimiento detallado y la evidencia del ensayo se conservan en la
+documentación operativa externa. Validar la base, los archivos y el acceso antes
+de cambiar el proxy hacia el sitio recuperado.
 
 ## Instalar plugins desde Administración
 
@@ -130,36 +190,14 @@ docker compose -f compose.yaml --env-file .env --env-file releases/release.env u
 docker compose -f compose.yaml --env-file .env --env-file releases/release.env exec -T --user www-data app php /usr/local/bin/check-runtime.php
 ```
 
-`--no-deps` evita tocar los demás servicios. Confirmar con `docker compose ps`
-que `app` esté saludable. Los plugins persisten en el volumen `moodle-code`.
+`--no-deps` evita tocar los demás servicios. Esperar a que `app` esté saludable
+antes de ejecutar la comprobación de runtime o acceder al instalador de plugins.
+Consultar su estado incluyendo ambos archivos de entorno:
+
+```bash
+docker compose -f compose.yaml --env-file .env --env-file releases/release.env ps
+```
+
+Los plugins persisten en el volumen `moodle-code`.
 No ejecutar `docker compose up` con `compose.plugins.yaml` como configuración
 habitual.
-
-## Pruebas en el servidor sin publicar el sitio
-
-Para una instalación desechable dentro de `/srv/plataforma/moodle`, ejecutar
-`sh scripts/prepare-env.sh`, revisar el `.env` privado y luego
-`sh scripts/install.sh`. La URL de prueba queda en `localhost:18080` y solo se
-consulta desde el servidor o por un túnel SSH. Registrar cada ciclo en
-el log de validación externo; guardar los resultados operativos sin credenciales
-en una ruta fuera del clon, para incorporarlos al repositorio de documentación.
-Si una prueba genera archivos temporales en `test-runs/`, que Git ignora,
-copiar los resultados a esa ruta al finalizar el ciclo.
-
-En un perfil con `MOODLE_WWWROOT=http://localhost:18080`, la comprobación
-`admin/cli/checks.php` ejecutada dentro de `app` no puede acceder al puerto del
-host: allí `localhost` designa al contenedor. Para esta prueba local, el smoke
-test consulta las rutas reales desde el host. En producción, con URL pública,
-volver a ejecutar las comprobaciones CLI de Moodle.
-
-Para comprobar que el código de solo lectura permite las funciones normales,
-ejecutar `tests/normal-operations.php` como `www-data` en `app`, enviándolo por
-entrada estándar de PHP. La prueba crea un usuario, un curso y un archivo con
-las API de Moodle; luego elimina el archivo y el curso y desactiva el usuario
-temporal. No copiar el script al contenedor: su raíz es de solo lectura.
-
-## Flujo de cambios
-
-1. Modificar y revisar en `dev`, rama `refactorizacion`.
-2. Probar una instalación local aislada; conservar sus volúmenes mientras sean útiles.
-3. Integrar la revisión validada en `main`, registrar las pruebas y desplegarla con respaldo previo de los datos existentes.
