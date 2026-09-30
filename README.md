@@ -5,9 +5,11 @@ Docker Compose. `compose.yaml` define los contenedores; `Dockerfile` construye
 las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
 La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
 `main` contiene la base validada para pseudoproducción. Los resultados y los
-pendientes de esta etapa están registrados en la documentación siguiente.
-El estado para una publicación real está en
-**[docs/production-readiness.md](docs/production-readiness.md)**.
+pendientes de cada despliegue se conservan fuera de este repositorio, en la
+documentación operativa del responsable de la instalación. El repositorio
+contiene esta guía y el runbook; los logs y el estado de preparación para
+producción se mantienen por separado. La URL del repositorio de documentación
+se añadirá cuando esté disponible.
 
 ## Qué contiene el stack
 

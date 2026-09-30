@@ -2,8 +2,15 @@
 
 Este repositorio contiene el despliegue Docker de Moodle. `main` contiene la
 base validada para pseudoproducción. Los cambios se preparan y prueban en una
-rama de desarrollo antes de integrarlos en `main`. La documentación histórica está en
-`D:\Servidor\documentacion general\Moodle`, fuera de Git.
+rama de desarrollo antes de integrarlos en `main`. Los registros de pruebas y
+el estado de preparación para producción se conservan en documentación
+operativa separada. La URL de su repositorio se añadirá cuando esté disponible.
+Las rutas de despliegue, dominios y correos mostrados son ejemplos; adaptarlos
+al entorno de instalación. `127.0.0.1:18080` es el destino local del proxy
+definido por Compose.
+El `.env`, las credenciales SMTP y el procedimiento privado para aplicar los
+ajustes tras reinstalar se guardan fuera de Git en una ruta local, con permisos
+restringidos para los archivos privados.
 
 ## Archivos necesarios
 
@@ -20,7 +27,7 @@ código compartido; `docker compose down -v` los elimina.
 ## Desarrollo local en Windows
 
 Requisitos: Docker Desktop con motor Linux, Git y PowerShell. Desde
-`D:\Servidor\Moodle_5.2.3_Dock\dev`:
+la raíz del clon local:
 
 ```powershell
 Copy-Item .env.example .env
@@ -148,11 +155,11 @@ Probar el acceso HTTPS real, el inicio de sesión, la creación y descarga de
 contenido, el correo saliente y los informes de seguridad de Moodle. Antes de
 recibir usuarios, disponer de copias externas al servidor y comprobar la
 restauración conjunta de base, `moodledata` y código con plugins. El estado de
-estas comprobaciones está en [docs/production-readiness.md](docs/production-readiness.md).
+estas comprobaciones debe registrarse en la documentación operativa externa.
 
 La recuperación debe usar un proyecto Compose aislado y los tres componentes
 del mismo respaldo: base, `moodledata` y `moodle-code`. El ensayo de esta rama
-está registrado en [docs/validation-log.md](docs/validation-log.md). En Compose
+está registrado en el log de validación externo. En Compose
 5.5.1, `docker compose create app` acepta el perfil de recuperación, mientras
 que `docker compose create --no-deps app` falla porque esa opción no existe
 para `create`. El perfil aislado se limpia solo después de comprobar la base y
@@ -190,8 +197,10 @@ Para una instalación desechable dentro de `/srv/plataforma/moodle`, ejecutar
 `sh scripts/prepare-env.sh`, revisar el `.env` privado y luego
 `sh scripts/install.sh`. La URL de prueba queda en `localhost:18080` y solo se
 consulta desde el servidor o por un túnel SSH. Registrar cada ciclo en
-`docs/validation-log.md`; guardar los resultados operativos sin credenciales
-en `test-runs/`, que Git ignora.
+el log de validación externo; guardar los resultados operativos sin credenciales
+en una ruta fuera del clon, para incorporarlos al repositorio de documentación.
+Si una prueba genera archivos temporales en `test-runs/`, que Git ignora,
+copiar los resultados a esa ruta al finalizar el ciclo.
 
 En un perfil con `MOODLE_WWWROOT=http://localhost:18080`, la comprobación
 `admin/cli/checks.php` ejecutada dentro de `app` no puede acceder al puerto del
