@@ -58,4 +58,12 @@ check_route /lib/exampleshimroute.php 302
 check_route /lib/exampleshimroute2.php 302
 
 echo
+echo "== Internal paths must not be public =="
+check_route /blog/tests/behat/delete.feature 404
+check_route /privacy/tests/fixtures/logo.png 404
+check_route /admin/environment.xml 404
+check_route /mod/assign/db/install.xml 404
+check_route /.git/HEAD 404
+
+echo
 echo "Smoke test completed."
