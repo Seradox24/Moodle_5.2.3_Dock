@@ -1,7 +1,7 @@
 # Moodle 5.2.3 con Docker
 
 Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.3 con
-Docker Compose. `compose.yaml` define los contenedores; `Dockerfile` construye
+Docker Compose en Linux. `compose.yaml` define los contenedores; `Dockerfile` construye
 las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
 La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
 `main` contiene la base validada para pseudoproducción. Los resultados y los
@@ -106,10 +106,9 @@ Sustituye los valores de ejemplo antes de instalar:
 
 El `.env` contiene credenciales y está excluido de Git. Los valores de
 `releases/release.env` pertenecen a la versión del repositorio y no se copian
-al `.env`. En desarrollo local sobre Windows, crear `.env` manualmente desde
-`.env.example`, con un proyecto Compose distinto y la URL local. La instalación
-asistida con `scripts/install.sh` se mantiene en Linux; Windows usa los comandos
-Docker Compose indicados en el runbook.
+al `.env`. La instalación y operación se realizan en Linux mediante los
+scripts de `scripts/`. Para desarrollo o pruebas Linux, usar un proyecto
+Compose distinto y la URL local según el runbook.
 El procedimiento también está en el
 [runbook](deploy-runbook.md).
 

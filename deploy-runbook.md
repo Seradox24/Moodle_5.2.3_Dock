@@ -1,6 +1,6 @@
 # Moodle 5.2.3: despliegue y pruebas
 
-Este repositorio contiene el despliegue Docker de Moodle. `main` contiene la
+Este repositorio contiene el despliegue Docker de Moodle en Linux. `main` contiene la
 base validada para pseudoproducción. Los cambios se preparan y prueban en una
 rama de desarrollo antes de integrarlos en `main`. Los registros de pruebas y
 el estado de preparación para producción se conservan en documentación
@@ -23,62 +23,6 @@ restringidos para los archivos privados.
 No subir archivos `.env`, respaldos, bases de datos ni `moodledata` a Git.
 Los tres volúmenes de Compose guardan la base, los archivos de Moodle y el
 código compartido; `docker compose down -v` los elimina.
-
-## Desarrollo local en Windows
-
-Requisitos: Docker Desktop con motor Linux, Git y PowerShell. Desde
-la raíz del clon local:
-
-```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-
-Este `.env` de prueba se completa manualmente. Usar contraseñas privadas y
-diferentes, un correo propio y los valores siguientes para aislar los datos de
-producción y acceder localmente:
-
-```dotenv
-COMPOSE_PROJECT_NAME=lms-moodle-dev
-IMAGE_NAMESPACE=lmsdev
-MOODLE_WWWROOT=http://localhost:18080
-MOODLE_SSLPROXY=false
-MOODLE_REVERSEPROXY=true
-```
-
-Antes de crear datos, confirmar que no hay contenedores ni volúmenes del
-proyecto `lms-moodle-dev`. Estos comandos deben devolver listas vacías:
-
-```powershell
-docker ps -a --filter 'label=com.docker.compose.project=lms-moodle-dev' --format '{{.Names}}'
-docker volume ls --filter 'label=com.docker.compose.project=lms-moodle-dev' --format '{{.Name}}'
-```
-
-Si aparece algún recurso, se trata de una instalación existente o incompleta;
-revisarlo antes de continuar. Comprobar también que el puerto local 18080 esté
-libre. El script `scripts/windows/clean-project.ps1` permite limpiar un
-proyecto de prueba después de revisar sus opciones.
-
-Desde PowerShell, en la raíz del clon, ejecutar la instalación inicial con
-los mismos servicios y el mismo instalador de Moodle que usa Linux:
-
-```powershell
-function Invoke-MoodleCompose {
-    docker compose --env-file .env --env-file releases/release.env @args
-    if ($LASTEXITCODE -ne 0) { throw "Falló Docker Compose: $($args -join ' ')" }
-}
-Invoke-MoodleCompose config --quiet
-Invoke-MoodleCompose build
-Invoke-MoodleCompose up -d db redis
-Invoke-MoodleCompose up -d --wait app
-Invoke-MoodleCompose exec -T --user www-data app sh /usr/local/bin/install-database.sh
-Invoke-MoodleCompose up -d --wait web cron
-.\scripts\windows\smoke-test.ps1 -EnvFile .env
-```
-
-Ejecutar la instalación de base de datos una sola vez por proyecto nuevo.
-Abrir `http://localhost:18080`. Para un proyecto que ya tiene datos, usar
-`.\scripts\windows\start.ps1 -EnvFile .env`, sin repetir el instalador.
 
 ## Producción en Ubuntu
 

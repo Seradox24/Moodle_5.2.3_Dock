@@ -56,8 +56,6 @@ done
 
 app_cid=$(compose ps -q app)
 if [ -n "$app_cid" ]; then
-    # Paths are passed inside a shell string to survive MSYS/Git Bash argument
-    # conversion when the launcher runs on Windows.
     hash_line=$(docker exec "$app_cid" sh -c 'sha256sum /usr/local/bin/check-runtime.php') || exit 1
     image_hash=$(printf '%s\n' "$hash_line" | awk '{print $1}')
     local_hash="$(sha256sum docker/install/check-runtime.php | awk '{print $1}')"
