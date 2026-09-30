@@ -9,6 +9,52 @@ Configuración del 30 de septiembre: E-learning SOM, nombre corto SOM, correo
 fuera de Git en la documentación local de Moodle. Política de respaldos aplazada
 por decisión del operador.
 
+## Cierre del 30 de septiembre: contraseña, OpenSSL y permisos
+
+Base comprobada: `c7858a2`, sin cambiar Moodle 5.2.3 ni las referencias de
+imágenes. Cambios operativos: contraseña administrativa, paquetes del host y
+documentación. El `.env` y los scripts privados locales se sincronizaron con
+la contraseña aleatoria nueva, sin registrar su valor en Git. La API de Moodle
+comprobó la política antes del cambio y cerró las sesiones del administrador.
+`sh scripts/start.sh` actualizó el entorno de los contenedores; se confirmó el
+inicio de sesión desde navegador y `REQUESTED_ADMIN_PASSWORD_MEETS_POLICY=yes`.
+
+Se ejecutó `apt-get install --only-upgrade libssl3t64 openssl
+openssl-provider-legacy`, con resultado `3.5.5-1ubuntu3.6` para los tres paquetes.
+Nginx pasó validación antes de reiniciar. `needrestart -r a -l` reinició los
+servicios admitidos por su política automática; se reiniciaron después
+`networkd-dispatcher`, `systemd-logind` y `unattended-upgrades`, que había dejado
+aplazados. La comprobación final no informa servicios ni sesiones pendientes.
+`apt-get -s upgrade` indica cero paquetes pendientes. SSH y Nginx permanecen
+activos y Moodle responde HTTPS 200.
+
+Se identificó el aviso de respaldos: únicamente `manager` tiene permiso
+explícito `moodle/backup:userinfo`, con cero asignaciones de ese rol y cero
+sobrescrituras que otorguen el permiso en otros contextos. `editingteacher` y
+`teacher` lo heredan sin concesión explícita. Corregida la referencia anterior
+al rol docente: el aviso corresponde al rol Gestor y es consistente con los
+permisos predeterminados de Moodle. No se alteraron los roles para ocultarlo.
+
+Se repitió la carga directa con una cuenta temporal nueva, sin reiniciar
+servicios durante el recorrido. El navegador automatizado volvió a dejar el
+selector esperando; el servidor recibió el archivo de 64 bytes con SHA-256
+`07e4db403eb3814e624d06c485ca673997da16b26c8fbdc8bed8ffac5b303b5e`.
+No se considera resuelto el recorrido directo. Las API de archivos funcionan y
+el ciclo anterior comprobó guardado y descarga mediante Archivos recientes.
+Solo está disponible el navegador integrado para esta automatización; no se
+concluye todavía si el problema también ocurre en un navegador habitual.
+La cuenta y los archivos temporales se limpiaron. Evidencia local:
+`D:\Servidor\documentacion general\Moodle\selector-carga-pendiente.jpg`.
+
+Pasaron de nuevo `smoke-test.sh`, `tests/normal-operations.php` y `checks.php`.
+El servicio móvil sigue desactivado y el código sigue en solo lectura.
+Resultados adicionales en `test-runs/openssl-upgrade-20260930.log`,
+`openssl-service-restarts-20260930.log`, `backup-role-review-20260930.log`,
+`password-start-20260930.log`, `upload-review-20260930.log` y
+`final-smoke-20260930.log`. La prueba de capacidad queda sin ejecutar hasta
+definir usuarios concurrentes y tareas representativas; la política de
+respaldos continúa aplazada.
+
 ## Ciclo del 30 de septiembre: configuración SOM y revisión de seguridad
 
 Revisiones: `e11fefe` bloquea archivos internos en Nginx; `01ba777` corrige cron
