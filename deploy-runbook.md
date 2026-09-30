@@ -68,7 +68,11 @@ sh ./scripts/install.sh
 
 El instalador construye las imágenes, inicia PostgreSQL y Redis, prepara el
 código compartido, instala la base con la CLI de Moodle e inicia web y cron.
-La comprobación HTTP se realiza después de activar el proxy HTTPS.
+Si `install.sh` termina correctamente, Moodle ya queda instalado en el servidor
+y el servicio web escucha en `127.0.0.1:18080`. El siguiente paso es conectar
+el dominio al reverse proxy Nginx del host, según la
+[referencia de publicación HTTPS](#publicación-https-y-comprobaciones).
+La comprobación HTTP se realiza después de activar ese proxy.
 
 Después de instalar y publicar por HTTPS, revisar los ajustes desde Administración.
 El usuario administrador inicial es `admin`. En Moodle 5.2.3,
@@ -87,21 +91,18 @@ privada de reinstalación.
 
 ## Publicación HTTPS y comprobaciones
 
-Para publicar mediante Nginx, configurar el proxy central del servidor según
-la URL definitiva y comprobar `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
-`127.0.0.1`; PostgreSQL y Redis no publican puertos del host.
-En un host que ya sirve otros dominios, crear un bloque `server_name` exclusivo
-para el subdominio Moodle y conservar los bloques existentes. Para solicitar el
-certificado con Certbot en modo `--webroot`, habilitar primero la ruta
-`/.well-known/acme-challenge/` por HTTP; un bloque temporal que devuelva 503
-en el resto de rutas mostrará ese error hasta completar la instalación. Después
-de emitir el certificado, activar el bloque HTTPS con proxy a
-`http://127.0.0.1:18080`, `proxy_set_header Host $host`,
-`proxy_set_header X-Forwarded-Proto https` y `client_max_body_size 300M`,
-acorde con el límite de petición predeterminado de Moodle. Si se cambia
-`MOODLE_MAX_REQUEST_MB`, ajustar también el límite del Nginx central.
-Ejecutar `nginx -t`, recargar Nginx y comprobar desde otra máquina
-el inicio de sesión HTTPS y la redirección HTTP a HTTPS.
+La conexión se configura en el **Nginx del servidor**, en el bloque HTTPS
+`server` del dominio de Moodle y su `location /`, con destino
+`proxy_pass http://127.0.0.1:18080`. En Ubuntu, este bloque suele estar en
+`/etc/nginx/sites-available/` y habilitado desde `/etc/nginx/sites-enabled/`;
+su configuración se administra fuera del repositorio.
+
+Usar el dominio definido en `MOODLE_WWWROOT`, certificado válido, encabezados
+`Host` y `X-Forwarded-Proto https`, redirección HTTP a HTTPS y límite de petición
+`client_max_body_size 300M` acorde con `MOODLE_MAX_REQUEST_MB`.
+Validar con `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
+localhost y conservar los bloques de otros sitios. El procedimiento de DNS,
+certificados y configuración del proxy pertenece a la documentación del servidor.
 
 Desde la raíz del clon, con la URL pública accesible:
 
