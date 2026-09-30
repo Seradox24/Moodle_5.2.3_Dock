@@ -114,6 +114,15 @@ sh ./scripts/smoke-test.sh
 sh ./scripts/backup.sh
 ```
 
+Después de instalar, revisar los ajustes desde Administración. En Moodle 5.2.3,
+el acceso de la app móvil se activa por defecto si el sitio usa HTTPS; se puede
+desactivar después mediante «Habilitar servicios web para dispositivos móviles»
+en Características avanzadas. Esto conserva el acceso desde navegadores móviles.
+Configurar el servidor SMTP, el tipo de seguridad, la autenticación, el usuario,
+la contraseña y el remitente en «Configuración de correo saliente». Guardar esas
+credenciales por separado del repositorio; los seis campos de `.env.example`
+siguen siendo los datos de instalación.
+
 `install.sh` realiza una instalación inicial; para iniciar una instalación
 existente usar `sh ./scripts/start.sh`. La base de datos y `moodledata` deben
 respaldarse también fuera del servidor y restaurarse juntos. Nunca volver a
