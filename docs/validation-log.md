@@ -4,6 +4,72 @@ Este archivo recoge resultados verificables sin contraseñas ni contenido de
 `.env`. Los logs completos de cada ciclo permanecen en `test-runs/` del servidor
 de pruebas y no se incluyen en Git.
 
+Configuración del 30 de septiembre: E-learning SOM, nombre corto SOM, correo
+`noreply@minayao.site`, app móvil desactivada. Credenciales y `.env` conservados
+fuera de Git en la documentación local de Moodle. Política de respaldos aplazada
+por decisión del operador.
+
+## Ciclo del 30 de septiembre: configuración SOM y revisión de seguridad
+
+Revisiones: `e11fefe` bloquea archivos internos en Nginx; `01ba777` corrige cron
+y documenta los ajustes posteriores a la instalación. Launcher 1.0.6; Moodle
+permanece fijado en 5.2.3. Los cambios se construyeron y aplicaron con
+`docker compose build` y `sh scripts/start.sh`, sin repetir el instalador de base.
+
+- Se configuraron los nombres SOM y el correo solicitado mediante las API de
+  Moodle; se actualizó el `.env` privado y la cuenta administrativa existente.
+  La contraseña administrativa numérica solicitada no pasa
+  `check_password_policy`; la política global sigue habilitada. No se registran
+  contraseñas aquí.
+- En el código de Moodle fijado, `admin/tool/mobile/settings.php` usa
+  `is_https() ? 1 : 0` como valor predeterminado. Se aplicó
+  `admin_setting_enablemobileservice::write_setting('0')`; se verificaron tanto
+  el ajuste como el servicio oficial móvil desactivados. Es un cambio posterior
+  a la instalación y no impide navegar desde un teléfono.
+- SMTP configurado con SSL en `pro.turbo-smtp.com:465` y LOGIN. Las credenciales
+  de la captura fueron rechazadas; el operador proporcionó una pareja nueva.
+  La segunda pareja pasó la autenticación con respuesta 235 y verificación del
+  certificado TLS. No se enviaron correos y la entrega queda pendiente.
+- El informe de seguridad detectó `blog/tests/behat/delete.feature` público
+  (HTTP 200). Se añadieron las reglas de archivos internos de la
+  [guía oficial de Nginx](https://docs.moodle.org/502/en/Nginx).
+  `smoke-test.sh` pasó login, router y cinco rutas protegidas con HTTP 404.
+  El informe posterior no presenta errores; señala como aviso un rol con
+  permiso para respaldar datos de usuarios. El índice de directorio devuelve
+  403, aceptado por Moodle. La primera ejecución del script de informe sin
+  `filelib.php` falló al resolver `curl`; se añadió la dependencia y se repitió.
+- `checks.php` detectó intervalos de cron de cuatro minutos: la ejecución CLI
+  tenía keep-alive y el bucle añadía una espera de 60 segundos. Se configuró
+  `cron.php --keep-alive=0` dentro del bucle. Después de construir y reiniciar,
+  la ejecución terminó correctamente y las comprobaciones de estado pasaron.
+  El log confirma comienzos a las 12:00:56, 12:01:59 y 12:03:00 (hora de Chile),
+  con finalización correcta; el intervalo volvió a aproximadamente un minuto.
+- Prueba desde navegador con usuario temporal sin permisos administrativos:
+  subida de `prueba-carga-som.txt`, guardado en archivos privados y descarga.
+  Original y descarga tienen 64 bytes y SHA-256
+  `07e4db403eb3814e624d06c485ca673997da16b26c8fbdc8bed8ffac5b303b5e`.
+  El selector quedó esperando tras el envío; el archivo ya existía en el
+  almacenamiento. Se recuperó desde Archivos recientes, se resolvió la copia
+  duplicada, se guardó y descargó. Se registró un error JavaScript
+  `M.core.exception is not a constructor` durante la primera ejecución.
+  El recorrido directo de subida requiere revisión adicional; el guardado y
+  descarga final pasaron. Se limpiaron usuario y archivos temporales.
+- Revisión del host: socket Docker `0660 root:docker`, grupo sin miembros;
+  `.env` `0600`; solo el puerto web local publicado para Moodle, sin exposición
+  directa de base o Redis. Docker Engine 29.8.1 y Compose 5.5.1 coinciden con
+  los candidatos del repositorio oficial. Tras `apt-get update`, se detectaron
+  tres actualizaciones de OpenSSL; se registraron sin aplicarlas. Disco libre
+  aproximadamente 87 GB y RAM disponible 6 GB. Sin carga esperada definida,
+  no se concluye una capacidad de usuarios concurrentes.
+- Resultados operativos: `test-runs/security-smoke-20260930.log`,
+  `security-report-20260930.log`, `smtp-check-20260930.log`,
+  `host-update-check-20260930.log`, `cron-build-20260930.log` y
+  `cron-start-20260930.log`. Los scripts temporales con credenciales se retiraron
+  del servidor; la documentación privada de reinstalación se conserva en el
+  equipo local fuera de Git, con permisos restringidos.
+
+## Ciclos anteriores
+
 | Fecha UTC | Commit de `refactorizacion` | Cambios y comandos principales | Pruebas y resultado | Fallos y corrección |
 | --- | --- | --- | --- | --- |
 | 2026-09-29 16:20 | `88a86ff` | Docker Engine 29.8.1 y Compose 5.5.1 en Ubuntu 26.04; perfil local generado; `preflight.sh`, `install.sh`, `smoke-test.sh`, `start.sh` | Instalación limpia y reinicio correctos; login 200; PostgreSQL, Redis y cron activos; ventana de plugins abre y vuelve a solo lectura | `checks.php` no llega a `localhost:18080` desde `app`; desde el host, las cinco rutas del router devolvieron 200, 200, 404, 302 y 302 |
