@@ -125,11 +125,29 @@ el `.env` privado: conservarlo por separado en un lugar seguro fuera de Git.
 Para publicar mediante Nginx, configurar el proxy central del servidor según
 la URL definitiva y comprobar `nginx -t` antes de recargar. Mantener el puerto 18080 ligado a
 `127.0.0.1`; PostgreSQL y Redis no publican puertos del host.
+En un host que ya sirve otros dominios, crear un bloque `server_name` exclusivo
+para el subdominio Moodle y conservar los bloques existentes. Para solicitar el
+certificado con Certbot en modo `--webroot`, habilitar primero la ruta
+`/.well-known/acme-challenge/` por HTTP; un bloque temporal que devuelva 503
+en el resto de rutas mostrará ese error hasta completar la instalación. Después
+de emitir el certificado, activar el bloque HTTPS con proxy a
+`http://127.0.0.1:18080`, `proxy_set_header Host $host`,
+`proxy_set_header X-Forwarded-Proto https` y el límite de carga acorde con
+Moodle. Ejecutar `nginx -t`, recargar Nginx y comprobar desde otra máquina
+el inicio de sesión HTTPS y la redirección HTTP a HTTPS.
 Probar el acceso HTTPS real, el inicio de sesión, la creación y descarga de
 contenido, el correo saliente y los informes de seguridad de Moodle. Antes de
 recibir usuarios, disponer de copias externas al servidor y comprobar la
 restauración conjunta de base, `moodledata` y código con plugins. El estado de
 estas comprobaciones está en [docs/production-readiness.md](docs/production-readiness.md).
+
+La recuperación debe usar un proyecto Compose aislado y los tres componentes
+del mismo respaldo: base, `moodledata` y `moodle-code`. El ensayo de esta rama
+está registrado en [docs/validation-log.md](docs/validation-log.md). En Compose
+5.5.1, `docker compose create app` acepta el perfil de recuperación, mientras
+que `docker compose create --no-deps app` falla porque esa opción no existe
+para `create`. El perfil aislado se limpia solo después de comprobar la base y
+los archivos recuperados. No restaurar sobre los volúmenes del sitio activo.
 
 ## Instalar plugins desde Administración
 
