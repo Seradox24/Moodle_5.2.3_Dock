@@ -210,6 +210,12 @@ if [ "$fresh_install" = true ]; then
     [ -z "$existing_containers" ] || fail "Project $project already has containers; install.sh is only for a fresh project."
     existing_volumes="$(docker volume ls -q --filter "label=com.docker.compose.project=$project")" || fail "Cannot inspect volumes for project $project."
     [ -z "$existing_volumes" ] || fail "Project $project already has data volumes; refusing a fresh install."
+    # Also reject manually created volumes without Compose labels.
+    for volume in postgres-data moodledata moodle-code; do
+        if docker volume inspect "${project}_${volume}" >/dev/null 2>&1; then
+            fail "A persistent volume for project $project already exists; refusing a fresh install."
+        fi
+    done
 fi
 
 running_services="$(compose ps --status running --services)" || fail "Cannot inspect running services for project $project."
