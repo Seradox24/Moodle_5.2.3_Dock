@@ -256,4 +256,4 @@ El Nginx del host se genera desde el perfil efectivo mediante
 Sin `--certificate-dir` genera solo HTTP/ACME. Guardar primero la salida en un
 archivo temporal y comprobarla antes de instalar; validar con `nginx -t` y
 recargar. El generador no instala certificados ni modifica Nginx por sí mismo.
-`TZ` también genera `date.timezone` en PHP al iniciar; web incluye tzdata.
+`TZ` también genera `date.timezone` en PHP al iniciar y configura la zona del sitio Moodle en ejecución; web incluye tzdata.

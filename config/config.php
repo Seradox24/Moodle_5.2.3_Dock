@@ -57,6 +57,7 @@ $CFG->slasharguments = true;
 $CFG->preventexecpath = true;
 
 $CFG->disableupdateautodeploy = !env_bool('MOODLE_PLUGIN_INSTALL', false);
+$CFG->timezone = env_value('TZ', 'UTC');
 $CFG->debug = 0;
 $CFG->debugdisplay = false;
 
