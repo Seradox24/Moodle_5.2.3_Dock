@@ -97,6 +97,7 @@ RUN chmod 0755 /usr/local/bin/moodle-cron-loop.sh \
     && chmod 0770 /var/moodledata
 
 COPY docker/install/install-database.sh /usr/local/bin/install-database.sh
+COPY docker/install/install-database.php /usr/local/bin/install-database.php
 COPY docker/install/check-runtime.php /usr/local/bin/check-runtime.php
 
 WORKDIR /var/www/moodle
