@@ -1,6 +1,6 @@
-# Moodle 5.2.3 con Docker
+# Moodle 5.2.4 con Docker
 
-Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.3 con
+Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.4 con
 Docker Compose en Linux. `compose.yaml` define los contenedores; `Dockerfile` construye
 las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
 La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
@@ -115,3 +115,31 @@ El procedimiento también está en el
 En operación normal, Moodle solo lee el código. Para instalar plugins desde
 Administración se abre temporalmente el modo de escritura descrito en el
 [runbook](deploy-runbook.md); los plugins quedan en `moodle-code`.
+
+## Perfil independiente de instalación
+
+Todos los scripts aceptan `--env-file /ruta/privada/instancia.env`. Las rutas
+relativas se resuelven desde el repositorio, sin depender de la consola.
+El cargador rechaza variables administradas exportadas en la consola para evitar
+sobrescrituras ocultas. Compose carga primero el perfil elegido y después
+`releases/release.env`; las versiones pertenecen a la release, no a la instalación.
+Los valores reales y secretos nunca se guardan en los ejemplos ni en este repositorio.
+
+| Opción | Consumidor y momento |
+| --- | --- |
+| `COMPOSE_PROJECT_NAME` | Compose al crear contenedores, redes y volúmenes. No cambiar en instalaciones existentes sin migración explícita. |
+| `MOODLE_HTTP_BIND`, `MOODLE_HTTP_PORT` | Publicación Docker al crear/recrear web; bind obligatorio 127.0.0.1 detrás del proxy del host. |
+| `TZ` | Contenedores web/app/cron/db y opciones timezone/log_timezone de PostgreSQL al iniciar. Predeterminado UTC; validar zona IANA instalada en el host. |
+| `MOODLE_WWWROOT` | Configuración Moodle en ejecución; el virtual host y TLS del host deben coincidir. |
+| `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME`, `MOODLE_LANG`, `MOODLE_ADMIN_USER`, `MOODLE_ADMIN_EMAIL`, `MOODLE_ADMIN_PASSWORD` | CLI de instalación inicial. Cambiar el perfil después no modifica el sitio ni cuentas existentes. |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Inicialización PostgreSQL y conexión Moodle. La rotación del rol requiere operación SQL explícita coordinada con el perfil. |
+
+Ejemplo de respaldo externo: `sh scripts/backup.sh --env-file /ruta/privada/instancia.env /ruta/respaldos/FECHA`.
+El respaldo no contiene el perfil privado. Conservarlo protegido por separado.
+Los tres volúmenes siguen gestionados por Docker; no se requieren bind mounts.
+
+La release 1.0.7 actualiza Moodle a 5.2.4 y PHP a 8.3.36 por correcciones de
+seguridad, conservando referencias por digest. Fuentes oficiales:
+[Moodle 5.2.4](https://moodledev.io/general/releases/5.2/5.2.4) y
+[PHP 8.3.36](https://www.php.net/releases/8_3_36.php).
+El nombre histórico del repositorio no impone la versión del manifiesto.

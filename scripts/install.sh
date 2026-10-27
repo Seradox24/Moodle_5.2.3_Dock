@@ -37,7 +37,7 @@ compose up -d --wait web cron
 
 echo
 echo "Instalación inicial de Moodle completada."
-echo "URL pública: $(compose_env_value MOODLE_WWWROOT http://localhost:18080)"
+echo "URL pública: $(compose_env_value MOODLE_WWWROOT '')"
 echo "Siguiente paso: configurar el proxy HTTPS y el certificado en el Nginx del servidor."
 echo "Cuando la URL pública sea accesible con un certificado válido, ejecutar:"
 echo "  sh ./scripts/smoke-test.sh --env-file \"$COMPOSE_ENV_FILE\""
