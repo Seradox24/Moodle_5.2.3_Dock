@@ -17,7 +17,7 @@ while [ "$#" -gt 0 ]; do
 done
 compose_init "$env_file"
 
-url="$(compose_env_value MOODLE_WWWROOT http://localhost:18080)"
+url="$(compose_env_value MOODLE_WWWROOT '')"
 [ -n "$url" ] || { echo "MOODLE_WWWROOT is missing" >&2; exit 1; }
 url="${url%/}"
 

@@ -41,10 +41,14 @@ done
 # The dynamic pool keeps start_servers=2 and max_spare_servers=3.
 [ "$children" -ge 3 ] && [ "$children" -le 512 ] || fail "MOODLE_FPM_MAX_CHILDREN must be between 3 and 512."
 
+timezone=${TZ:-UTC}
+php -r 'try { new DateTimeZone(getenv("TZ") ?: "UTC"); } catch (Throwable $e) { fwrite(STDERR, "Invalid TZ.\n"); exit(1); }'
+
 dir=/run/php
 mkdir -p "$dir"
 
 cat > "$dir/zz-limits.ini" <<EOF
+date.timezone = ${timezone}
 upload_max_filesize = ${upload}M
 post_max_size = ${request}M
 memory_limit = ${memory}M

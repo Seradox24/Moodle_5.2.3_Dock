@@ -62,7 +62,7 @@ services:
     image: ${IMAGE_NAMESPACE:-lms}/moodle-web:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     restart: unless-stopped
     environment:
-      TZ: America/Santiago
+      TZ: ${TZ:-UTC}
       NGINX_ENVSUBST_OUTPUT_DIR: /tmp/nginx-conf.d
       MOODLE_MAX_REQUEST_MB: ${MOODLE_MAX_REQUEST_MB:-300}
       MOODLE_FASTCGI_READ_TIMEOUT_SECONDS: ${MOODLE_FASTCGI_READ_TIMEOUT_SECONDS:-120}
@@ -70,7 +70,7 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "127.0.0.1:18080:80"
+      - "${MOODLE_HTTP_BIND:-127.0.0.1}:${MOODLE_HTTP_PORT:-18080}:80"
     volumes:
       - type: volume
         source: moodle-code
@@ -103,7 +103,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *moodle-runtime-environment
-      TZ: America/Santiago
+      TZ: ${TZ:-UTC}
       MOODLE_DB_HOST: db
       MOODLE_DB_PORT: "5432"
       MOODLE_SITE_FULLNAME: ${MOODLE_SITE_FULLNAME:?Set MOODLE_SITE_FULLNAME in the selected environment file}
@@ -147,12 +147,13 @@ services:
     logging: *logging
 
   cron:
+    stop_signal: SIGTERM
     image: ${IMAGE_NAMESPACE:-lms}/moodle-app:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     pull_policy: never
     restart: unless-stopped
     environment:
       <<: *moodle-runtime-environment
-      TZ: America/Santiago
+      TZ: ${TZ:-UTC}
       MOODLE_DB_HOST: db
       MOODLE_DB_PORT: "5432"
     depends_on:
@@ -185,12 +186,12 @@ services:
     restart: unless-stopped
     # Force the session/log timezone at every start: a cluster initialised
     # without TZ keeps Etc/UTC even when the container is later restarted with TZ.
-    command: ["-c", "timezone=America/Santiago", "-c", "log_timezone=America/Santiago"]
+    command: ["-c", "timezone=${TZ:-UTC}", "-c", "log_timezone=${TZ:-UTC}"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-moodle}
       POSTGRES_USER: ${POSTGRES_USER:-moodle}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the selected environment file}
-      TZ: America/Santiago
+      TZ: ${TZ:-UTC}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:

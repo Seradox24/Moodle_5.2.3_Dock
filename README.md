@@ -1,6 +1,6 @@
-# Moodle 5.2.3 con Docker
+# Moodle 5.2.4 con Docker
 
-Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.3 con
+Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.4 con
 Docker Compose en Linux. `compose.yaml` define los contenedores; `Dockerfile` construye
 las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
 La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
@@ -102,7 +102,7 @@ Sustituye los valores de ejemplo antes de instalar:
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: dos contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`: identidad y correo reales del sitio.
 - `MOODLE_WWWROOT`: URL pública definitiva asignada por el Nginx central. Es la dirección que usará Moodle en sus enlaces, aunque Nginx se conecte al contenedor por localhost.
-- El puerto local `127.0.0.1:18080` y los ajustes del proxy ya están fijados en Compose para producción.
+- El puerto local se configura con `MOODLE_HTTP_PORT`, siempre en loopback para el proxy HTTPS.
 
 El `.env` contiene credenciales y está excluido de Git. Los valores de
 `releases/release.env` pertenecen a la versión del repositorio y no se copian
@@ -115,3 +115,57 @@ El procedimiento también está en el
 En operación normal, Moodle solo lee el código. Para instalar plugins desde
 Administración se abre temporalmente el modo de escritura descrito en el
 [runbook](deploy-runbook.md); los plugins quedan en `moodle-code`.
+
+## Perfil independiente de instalación
+
+Todos los scripts aceptan `--env-file /ruta/privada/instancia.env`. Las rutas
+relativas se resuelven desde el repositorio, sin depender de la consola.
+El cargador rechaza variables administradas exportadas en la consola para evitar
+sobrescrituras ocultas. Compose carga primero el perfil elegido y después
+`releases/release.env`; las versiones pertenecen a la release, no a la instalación.
+Los valores reales y secretos nunca se guardan en los ejemplos ni en este repositorio.
+
+| Opción | Consumidor y momento |
+| --- | --- |
+| `COMPOSE_PROJECT_NAME` | Compose al crear contenedores, redes y volúmenes. No cambiar en instalaciones existentes sin migración explícita. |
+| `MOODLE_HTTP_BIND`, `MOODLE_HTTP_PORT` | Publicación Docker al crear/recrear web; bind obligatorio 127.0.0.1 detrás del proxy del host. |
+| `TZ` | Contenedores web/app/cron/db y opciones timezone/log_timezone de PostgreSQL al iniciar. Predeterminado UTC; validar zona IANA instalada en el host. |
+| `MOODLE_WWWROOT` | Configuración Moodle en ejecución; el virtual host y TLS del host deben coincidir. |
+| `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME`, `MOODLE_LANG`, `MOODLE_ADMIN_USER`, `MOODLE_ADMIN_EMAIL`, `MOODLE_ADMIN_PASSWORD` | CLI de instalación inicial. Cambiar el perfil después no modifica el sitio ni cuentas existentes. |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Inicialización PostgreSQL y conexión Moodle. La rotación del rol requiere operación SQL explícita coordinada con el perfil. |
+
+Ejemplo de respaldo externo: `sh scripts/backup.sh --env-file /ruta/privada/instancia.env /ruta/respaldos/FECHA`.
+El respaldo no contiene el perfil privado. Conservarlo protegido por separado.
+Los tres volúmenes siguen gestionados por Docker; no se requieren bind mounts.
+
+La release 1.0.7 actualiza Moodle a 5.2.4 y PHP a 8.3.36 por correcciones de
+seguridad, conservando referencias por digest. Fuentes oficiales:
+[Moodle 5.2.4](https://moodledev.io/general/releases/5.2/5.2.4) y
+[PHP 8.3.36](https://www.php.net/releases/8_3_36.php).
+El nombre histórico del repositorio no impone la versión del manifiesto.
+
+## Respaldo periódico y ensayo de recuperación
+
+`python3 scripts/backup-retained.py --env-file /ruta/privada/instancia.env --destination /ruta/respaldos --keep 7`
+serializa ejecuciones mediante un bloqueo, comprueba los checksums y conserva
+los siete respaldos completos más recientes. Un fallo conserva el directorio
+`.partial`, devuelve error y no elimina respaldos previos. Ejecutarlo con umask
+0077 desde un timer del host, con zona IANA y hora explícitas; revisar journal
+ante fallos. Detiene brevemente app/web/cron. El almacenamiento local no
+sustituye una copia externa.
+
+`sh scripts/restore.sh --env-file /ruta/privada/recuperacion.env --backup /ruta/respaldo`
+requiere un proyecto sin contenedores ni volúmenes existentes, metadata de
+release coincidente e imágenes disponibles. Restaura los tres componentes sin
+modificar el proyecto original. Para un ensayo, usar otro nombre Compose, otro
+puerto loopback y URL local con `MOODLE_SSLPROXY=false` y
+`MOODLE_REVERSEPROXY=true`; no apuntar el proxy público al ensayo.
+Comprobar login y contenido antes de retirar únicamente los recursos del ensayo.
+Validación estática de perfiles: `python3 tests/profiles.py` (Linux con Compose).
+
+El Nginx del host se genera desde el perfil efectivo mediante
+`python3 scripts/render-proxy.py --env-file /ruta/privada/instancia.env --acme-root /var/www/letsencrypt --certificate-dir /etc/letsencrypt/live/DOMINIO`.
+Sin `--certificate-dir` genera solo HTTP/ACME. Guardar primero la salida en un
+archivo temporal y comprobarla antes de instalar; validar con `nginx -t` y
+recargar. El generador no instala certificados ni modifica Nginx por sí mismo.
+`TZ` también genera `date.timezone` en PHP al iniciar y configura la zona del sitio Moodle en ejecución; web incluye tzdata.

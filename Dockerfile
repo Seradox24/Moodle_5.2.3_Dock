@@ -97,6 +97,7 @@ RUN chmod 0755 /usr/local/bin/moodle-cron-loop.sh \
     && chmod 0770 /var/moodledata
 
 COPY docker/install/install-database.sh /usr/local/bin/install-database.sh
+COPY docker/install/install-database.php /usr/local/bin/install-database.php
 COPY docker/install/check-runtime.php /usr/local/bin/check-runtime.php
 
 WORKDIR /var/www/moodle
@@ -124,7 +125,8 @@ COPY docker/nginx/limits.conf.template /etc/nginx/templates/limits.conf.template
 
 # Match the PHP www-data GID so Nginx can read plugin assets created with 0770.
 # The shared code volume is mounted read-only in this service.
-RUN addgroup -S -g 33 moodle-code \
+RUN apk add --no-cache tzdata \
+    && addgroup -S -g 33 moodle-code \
     && test "${RELEASE_IMAGE_TAG}" = "moodle-${MOODLE_VERSION}-launcher-${LAUNCHER_VERSION}" \
     && addgroup nginx moodle-code \
     && mkdir -p /var/www/moodle/public

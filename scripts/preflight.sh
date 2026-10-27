@@ -47,7 +47,7 @@ fi
 value() { compose_env_value "$1" "${2:-}"; }
 
 known_keys='COMPOSE_PROJECT_NAME,IMAGE_NAMESPACE,MOODLE_WWWROOT,MOODLE_HTTP_BIND,MOODLE_HTTP_PORT,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,MOODLE_DB_PREFIX,MOODLE_SITE_FULLNAME,MOODLE_SITE_SHORTNAME,MOODLE_LANG,MOODLE_ADMIN_USER,MOODLE_ADMIN_PASSWORD,MOODLE_ADMIN_EMAIL,MOODLE_PLUGIN_INSTALL,MOODLE_REVERSEPROXY,MOODLE_SSLPROXY,MOODLE_ROUTER_CONFIGURED,MOODLE_REDIS_SESSIONS,MOODLE_REDIS_HOST,MOODLE_REDIS_PORT,MOODLE_REDIS_DATABASE,MOODLE_REDIS_PREFIX,MOODLE_MAX_UPLOAD_MB,MOODLE_MAX_REQUEST_MB,MOODLE_MEMORY_LIMIT_MB,MOODLE_MAX_EXECUTION_SECONDS,MOODLE_FPM_MAX_CHILDREN,MOODLE_FASTCGI_READ_TIMEOUT_SECONDS,COMPOSE_FILE,COMPOSE_PROFILES,COMPOSE_ENV_FILES,MOODLE_GIT_TAG,MOODLE_GIT_REF,RELEASE_IMAGE_TAG,LAUNCHER_VERSION,MOODLE_VERSION,DEBIAN_IMAGE,PHP_IMAGE,NGINX_IMAGE,POSTGRES_IMAGE,REDIS_IMAGE,MOODLE_DB_HOST,MOODLE_DB_PORT,MOODLE_MAIL_ENABLED,TZ'
-obsolete_keys='MOODLE_GIT_TAG,MOODLE_GIT_REF,RELEASE_IMAGE_TAG,LAUNCHER_VERSION,MOODLE_VERSION,DEBIAN_IMAGE,PHP_IMAGE,NGINX_IMAGE,POSTGRES_IMAGE,REDIS_IMAGE,MOODLE_DB_HOST,MOODLE_DB_PORT,MOODLE_MAIL_ENABLED,TZ,SSO_ENABLED,SSO_ISSUER_URL,SSO_CLIENT_ID,INTEGRATION_API_URL'
+obsolete_keys='MOODLE_GIT_TAG,MOODLE_GIT_REF,RELEASE_IMAGE_TAG,LAUNCHER_VERSION,MOODLE_VERSION,DEBIAN_IMAGE,PHP_IMAGE,NGINX_IMAGE,POSTGRES_IMAGE,REDIS_IMAGE,MOODLE_DB_HOST,MOODLE_DB_PORT,MOODLE_MAIL_ENABLED,SSO_ENABLED,SSO_ISSUER_URL,SSO_CLIENT_ID,INTEGRATION_API_URL'
 forbidden_keys='COMPOSE_FILE,COMPOSE_PROFILES,COMPOSE_ENV_FILES'
 audit_output=$(awk -v known="$known_keys" -v obsolete="$obsolete_keys" -v forbidden="$forbidden_keys" -f ./scripts/lib/audit-env.awk "$COMPOSE_ENV_FILE") || fail "Could not inspect environment variable names in $COMPOSE_ENV_FILE."
 while IFS='|' read -r category item; do
@@ -84,7 +84,7 @@ esac
 
 port="$(value MOODLE_HTTP_PORT 18080)"
 valid_port "$port" || fail "MOODLE_HTTP_PORT must be an integer from 1 to 65535."
-[ "$port" = 18080 ] || fail "MOODLE_HTTP_PORT is fixed at 18080 in this stack."
+
 bind="$(value MOODLE_HTTP_BIND 127.0.0.1)"
 valid_ipv4() {
     [ "$1" = 0.0.0.0 ] && return 0
@@ -92,6 +92,13 @@ valid_ipv4() {
 }
 valid_ipv4 "$bind" || fail "MOODLE_HTTP_BIND must be 0.0.0.0, 127.0.0.1 or a valid IPv4 address."
 [ "$bind" = 127.0.0.1 ] || fail "MOODLE_HTTP_BIND is fixed at 127.0.0.1 in this stack."
+
+timezone="$(value TZ UTC)"
+case "$timezone" in
+    UTC) ;;
+    *..*|/*|*[!A-Za-z0-9_+/-]*|'') fail "TZ must be a valid IANA timezone." ;;
+    *) [ -f "/usr/share/zoneinfo/$timezone" ] || fail "TZ is not installed in the host timezone database." ;;
+esac
 
 url="$(value MOODLE_WWWROOT)"
 if ! url_parts=$(printf '%s\n' "$url" | awk -f ./scripts/lib/validate-wwwroot.awk); then
@@ -127,7 +134,7 @@ if [ "$sslproxy" = true ]; then
 else
     [ "$url_scheme" = http ] || fail "An https:// MOODLE_WWWROOT requires MOODLE_SSLPROXY=true."
     [ "$url_port" -eq "$port" ] || fail "For direct HTTP access, the MOODLE_WWWROOT port must match MOODLE_HTTP_PORT."
-    [ "$reverseproxy" = true ] || fail "Local HTTP on port 18080 requires MOODLE_REVERSEPROXY=true."
+    [ "$reverseproxy" = true ] || fail "Local HTTP requires MOODLE_REVERSEPROXY=true."
     { [ "$url_host" = localhost ] || [ "$url_host" = 127.0.0.1 ]; } || fail "Direct HTTP is only supported locally."
 fi
 
@@ -203,6 +210,12 @@ if [ "$fresh_install" = true ]; then
     [ -z "$existing_containers" ] || fail "Project $project already has containers; install.sh is only for a fresh project."
     existing_volumes="$(docker volume ls -q --filter "label=com.docker.compose.project=$project")" || fail "Cannot inspect volumes for project $project."
     [ -z "$existing_volumes" ] || fail "Project $project already has data volumes; refusing a fresh install."
+    # Also reject manually created volumes without Compose labels.
+    for volume in postgres-data moodledata moodle-code; do
+        if docker volume inspect "${project}_${volume}" >/dev/null 2>&1; then
+            fail "A persistent volume for project $project already exists; refusing a fresh install."
+        fi
+    done
 fi
 
 running_services="$(compose ps --status running --services)" || fail "Cannot inspect running services for project $project."
