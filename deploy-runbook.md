@@ -41,7 +41,7 @@ chmod 600 .env
 nano .env
 ```
 
-Completar los seis campos de `.env`:
+Completar los campos obligatorios y revisar las opciones de instalación de `.env`:
 
 - `POSTGRES_PASSWORD` y `MOODLE_ADMIN_PASSWORD`: contraseñas fuertes y distintas.
 - `MOODLE_SITE_FULLNAME`, `MOODLE_SITE_SHORTNAME` y `MOODLE_ADMIN_EMAIL`.
@@ -76,13 +76,13 @@ el dominio al reverse proxy Nginx del host, según la
 La comprobación HTTP se realiza después de activar ese proxy.
 
 Después de instalar y publicar por HTTPS, revisar los ajustes desde Administración.
-El usuario administrador inicial es `admin`. En Moodle 5.2.4,
+El usuario administrador inicial lo define `MOODLE_ADMIN_USER` (predeterminado `admin`). En Moodle 5.2.4,
 el acceso de la app móvil se activa por defecto si el sitio usa HTTPS. Para
 mantenerlo desactivado, desmarcar «Habilitar servicios web para dispositivos móviles»
 en Características avanzadas. Esto conserva el acceso desde navegadores móviles.
 Configurar el servidor SMTP, el tipo de seguridad, la autenticación, el usuario,
 la contraseña y el remitente en «Configuración de correo saliente». Guardar esas
-credenciales por separado del repositorio; los seis campos de `.env.example`
+credenciales por separado del repositorio; los campos iniciales de `.env.example`
 siguen siendo los datos de instalación.
 
 Los datos del sitio y del administrador son valores iniciales: cambiar esos
@@ -231,3 +231,29 @@ seguridad, conservando referencias por digest. Fuentes oficiales:
 [Moodle 5.2.4](https://moodledev.io/general/releases/5.2/5.2.4) y
 [PHP 8.3.36](https://www.php.net/releases/8_3_36.php).
 El nombre histórico del repositorio no impone la versión del manifiesto.
+
+## Respaldo periódico y ensayo de recuperación
+
+`python3 scripts/backup-retained.py --env-file /ruta/privada/instancia.env --destination /ruta/respaldos --keep 7`
+serializa ejecuciones mediante un bloqueo, comprueba los checksums y conserva
+los siete respaldos completos más recientes. Un fallo conserva el directorio
+`.partial`, devuelve error y no elimina respaldos previos. Ejecutarlo con umask
+0077 desde un timer del host, con zona IANA y hora explícitas; revisar journal
+ante fallos. Detiene brevemente app/web/cron. El almacenamiento local no
+sustituye una copia externa.
+
+`sh scripts/restore.sh --env-file /ruta/privada/recuperacion.env --backup /ruta/respaldo`
+requiere un proyecto sin contenedores ni volúmenes existentes, metadata de
+release coincidente e imágenes disponibles. Restaura los tres componentes sin
+modificar el proyecto original. Para un ensayo, usar otro nombre Compose, otro
+puerto loopback y URL local con `MOODLE_SSLPROXY=false` y
+`MOODLE_REVERSEPROXY=true`; no apuntar el proxy público al ensayo.
+Comprobar login y contenido antes de retirar únicamente los recursos del ensayo.
+Validación estática de perfiles: `python3 tests/profiles.py` (Linux con Compose).
+
+El Nginx del host se genera desde el perfil efectivo mediante
+`python3 scripts/render-proxy.py --env-file /ruta/privada/instancia.env --acme-root /var/www/letsencrypt --certificate-dir /etc/letsencrypt/live/DOMINIO`.
+Sin `--certificate-dir` genera solo HTTP/ACME. Guardar primero la salida en un
+archivo temporal y comprobarla antes de instalar; validar con `nginx -t` y
+recargar. El generador no instala certificados ni modifica Nginx por sí mismo.
+`TZ` también genera `date.timezone` en PHP al iniciar; web incluye tzdata.
