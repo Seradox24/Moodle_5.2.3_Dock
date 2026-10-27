@@ -28,6 +28,7 @@ with tempfile.TemporaryDirectory(prefix='moodle-profile-check-') as directory:
         result = subprocess.run(['docker','compose','--project-directory',str(ROOT),'-f',str(ROOT/'compose.yaml'),'--env-file',str(profile),'--env-file',str(ROOT/'releases/release.env'),'config','--format','json'], check=True, capture_output=True)
         model = json.loads(result.stdout)
         assert model['name'] == name
+        assert model['services']['cron']['stop_signal'] == 'SIGTERM'
         publication = model['services']['web']['ports'][0]
         assert publication['host_ip'] == '127.0.0.1' and str(publication['published']) == str(port)
         for service in ['web','app','cron','db']:

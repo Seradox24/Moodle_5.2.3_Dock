@@ -147,6 +147,7 @@ services:
     logging: *logging
 
   cron:
+    stop_signal: SIGTERM
     image: ${IMAGE_NAMESPACE:-lms}/moodle-app:${RELEASE_IMAGE_TAG:?Run through the launcher to load releases/release.env}
     pull_policy: never
     restart: unless-stopped
