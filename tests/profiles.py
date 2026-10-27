@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='moodle-profile-check-') as directory:
     models = []
     for name, port, zone in [('profile-check-a', 28081, 'UTC'), ('profile-check-b', 28082, 'America/Santiago')]:
         profile = Path(directory)/name
-        profile.write_text(BASE+f'COMPOSE_PROJECT_NAME={name}\nMOODLE_HTTP_PORT={port}\nTZ={zone}\n')
+        profile.write_text(BASE.replace('https://moodle.invalid', f'https://{name}.invalid')+f'COMPOSE_PROJECT_NAME={name}\nMOODLE_HTTP_PORT={port}\nTZ={zone}\n')
         preflight(profile)
         result = subprocess.run(['docker','compose','--project-directory',str(ROOT),'-f',str(ROOT/'compose.yaml'),'--env-file',str(profile),'--env-file',str(ROOT/'releases/release.env'),'config','--format','json'], check=True, capture_output=True)
         model = json.loads(result.stdout)
@@ -33,6 +33,9 @@ with tempfile.TemporaryDirectory(prefix='moodle-profile-check-') as directory:
         for service in ['web','app','cron','db']:
             assert model['services'][service]['environment']['TZ'] == zone
         assert f'timezone={zone}' in model['services']['db']['command']
+        rendered = subprocess.run(['python3',str(ROOT/'scripts/render-proxy.py'),'--env-file',str(profile),'--acme-root','/var/www/letsencrypt','--certificate-dir','/etc/letsencrypt/live/profile-check'], check=True, capture_output=True).stdout.decode()
+        assert f'server_name {name}.invalid;' in rendered
+        assert f'proxy_pass http://127.0.0.1:{port};' in rendered
         models.append(model)
     for kind in ['volumes', 'networks']:
         identities = [{item['name'] for item in m[kind].values()} for m in models]
