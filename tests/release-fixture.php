@@ -29,6 +29,8 @@ if (getenv('COMPOSE_TEST_MODE') === 'seed') {
         'content' => $content,
         'contentformat' => FORMAT_HTML,
         'display' => 0,
+        'printintro' => 1,
+        'printlastmodified' => 1,
         'visible' => 1,
     ], $course);
     get_file_storage()->create_file_from_string([

@@ -241,11 +241,10 @@ Ejemplo de respaldo externo: `sh scripts/backup.sh --env-file /ruta/privada/inst
 El respaldo no contiene el perfil privado. Conservarlo protegido por separado.
 Los tres volúmenes siguen gestionados por Docker; no se requieren bind mounts.
 
-La release 1.0.7 actualiza Moodle a 5.3.0 y PHP a 8.3.36 por correcciones de
-seguridad, conservando referencias por digest. Fuentes oficiales:
-[Moodle 5.3.0](https://moodledev.io/general/releases/5.2/5.3.0) y
-[PHP 8.3.36](https://www.php.net/releases/8_3_36.php).
-El nombre histórico del repositorio no impone la versión del manifiesto.
+El instalador 1.1.0 utiliza Moodle 5.3.0 LTS, PHP 8.3.36 y PostgreSQL 17.11,
+con referencias fijadas por SHA/digest. Los requisitos y el alcance de
+instalación limpia se detallan al inicio de esta guía y en los
+[requisitos oficiales de Moodle 5.3](https://moodledev.io/general/releases/5.3).
 
 ## Respaldo periódico y ensayo de recuperación
 

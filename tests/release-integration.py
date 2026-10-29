@@ -101,6 +101,21 @@ MOODLE_LANG=en
         version = compose(profiles[0], 'exec', '-T', 'app', 'cat', '/var/www/moodle/.build-version')
         if version.strip() != '5.3.0':
             raise RuntimeError('Expected Moodle 5.3.0')
+        compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app', 'php', data=b'''<?php
+define('CLI_SCRIPT', true);
+require '/var/www/moodle/config.php';
+try {
+    $response = \\core\\di::get(\\core\\router\\apidocs::class)->openapi_docs(new \\GuzzleHttp\\Psr7\\Response());
+    $schema = json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+    if (empty($schema['openapi']) || empty($schema['paths'])) {
+        throw new RuntimeException('OpenAPI schema is incomplete');
+    }
+    echo "OpenAPI schema generation verified.\\n";
+} catch (Throwable $error) {
+    fwrite(STDERR, get_class($error) . ': ' . $error->getMessage() . "\\n" . $error->getTraceAsString() . "\\n");
+    exit(1);
+}
+''')
         run(['sh', 'scripts/smoke-test.sh', '--env-file', profiles[0]])
         compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app', 'php',
                 data=(ROOT/'tests/normal-operations.php').read_bytes())
@@ -143,6 +158,9 @@ MOODLE_LANG=en
         login(28882, password)
         run(['sh', 'scripts/smoke-test.sh', '--env-file', profiles[1]])
         print('Fresh release, persistence, backup and isolated restoration passed.', flush=True)
+    except Exception:
+        compose(profiles[0], 'logs', '--no-color', '--tail', '60', 'app', 'web')
+        raise
     finally:
         # Only the random projects whose absence was checked before this run.
         for profile in profiles:
