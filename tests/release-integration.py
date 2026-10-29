@@ -22,12 +22,12 @@ ENV.pop('TZ', None)
 def run(args, *, success=True, data=None, quiet=False):
     result = subprocess.run([str(a) for a in args], input=data, env=ENV,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    if (result.returncode == 0) != success:
+    if success is not None and (result.returncode == 0) != success:
         # Profiles/secrets are never command arguments or printed by this runner.
         if not quiet:
             print(result.stdout.decode(errors='replace'), flush=True)
         raise RuntimeError('Integration command returned an unexpected result: ' + str(args[0]))
-    if not quiet and success:
+    if not quiet and success is not False:
         print(result.stdout.decode(errors='replace'), end='', flush=True)
     return result.stdout.decode(errors='replace')
 
@@ -90,7 +90,7 @@ MOODLE_LANG=en
         project = names[profiles.index(profile)]
         compose(profile, 'exec', '-T', '--user', 'www-data',
                 '-e', 'COMPOSE_TEST_PROJECT='+project, '-e', 'COMPOSE_TEST_MODE='+mode,
-                'app', 'php', data=(ROOT/'tests/release-fixture.php').read_bytes())
+                'app', 'php', '/dev/stdin', data=(ROOT/'tests/release-fixture.php').read_bytes())
 
     try:
         print('Building and installing new release.', flush=True)
@@ -101,7 +101,8 @@ MOODLE_LANG=en
         version = compose(profiles[0], 'exec', '-T', 'app', 'cat', '/var/www/moodle/.build-version')
         if version.strip() != '5.3.0':
             raise RuntimeError('Expected Moodle 5.3.0')
-        compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app', 'php', data=b'''<?php
+        api_diagnostic = compose(profiles[0], 'exec', '-T', '--user', 'www-data',
+                                 'app', 'php', '/dev/stdin', success=None, data=b'''<?php
 define('CLI_SCRIPT', true);
 require '/var/www/moodle/config.php';
 try {
@@ -112,12 +113,13 @@ try {
     }
     echo "OpenAPI schema generation verified.\\n";
 } catch (Throwable $error) {
-    fwrite(STDERR, get_class($error) . ': ' . $error->getMessage() . "\\n" . $error->getTraceAsString() . "\\n");
+    echo get_class($error) . ': ' . $error->getMessage() . "\\n" . $error->getTraceAsString() . "\\n";
     exit(1);
 }
 ''')
-        run(['sh', 'scripts/smoke-test.sh', '--env-file', profiles[0]])
-        compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app', 'php',
+        compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app',
+                'php', '/usr/local/bin/check-runtime.php')
+        compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app', 'php', '/dev/stdin',
                 data=(ROOT/'tests/normal-operations.php').read_bytes())
         fixture(profiles[0], 'seed')
         login(28881, password)
@@ -157,6 +159,8 @@ try {
         fixture(profiles[1], 'verify')
         login(28882, password)
         run(['sh', 'scripts/smoke-test.sh', '--env-file', profiles[1]])
+        if 'OpenAPI schema generation verified.' not in api_diagnostic:
+            raise RuntimeError('OpenAPI CLI generation failed; see diagnostic above')
         print('Fresh release, persistence, backup and isolated restoration passed.', flush=True)
     except Exception:
         compose(profiles[0], 'logs', '--no-color', '--tail', '60', 'app', 'web')
