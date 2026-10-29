@@ -1,6 +1,9 @@
 ARG DEBIAN_IMAGE
 ARG PHP_IMAGE
 ARG NGINX_IMAGE
+ARG COMPOSER_IMAGE
+
+FROM ${COMPOSER_IMAGE} AS composer
 
 FROM ${DEBIAN_IMAGE} AS moodle-source
 
@@ -79,6 +82,14 @@ RUN apt-get update \
     && rm -rf /tmp/pear /var/lib/apt/lists/*
 
 COPY --from=moodle-source /src /var/www/moodle
+# Moodle 5.3 loads some libraries (league/oauth2-server, used by the REST API
+# and its OpenAPI document) only through Composer. Install the locked
+# dependencies outside public/ and keep Composer out of the final image.
+RUN --mount=type=bind,from=composer,source=/usr/bin/composer,target=/usr/local/bin/composer \
+    cd /var/www/moodle \
+    && COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_HOME=/tmp/composer composer install \
+        --no-dev --classmap-authoritative --no-interaction --no-progress \
+    && rm -rf /tmp/composer
 COPY --from=moodle-source /moodle-public /opt/moodle-public
 COPY config/config.php /var/www/moodle/config.php
 COPY docker/php/moodle.ini /usr/local/etc/php/conf.d/zz-moodle.ini

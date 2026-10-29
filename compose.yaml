@@ -10,6 +10,7 @@ x-release-build-args: &release-build-args
   DEBIAN_IMAGE: ${DEBIAN_IMAGE:?Release metadata is missing DEBIAN_IMAGE}
   PHP_IMAGE: ${PHP_IMAGE:?Release metadata is missing PHP_IMAGE}
   NGINX_IMAGE: ${NGINX_IMAGE:?Release metadata is missing NGINX_IMAGE}
+  COMPOSER_IMAGE: ${COMPOSER_IMAGE:?Release metadata is missing COMPOSER_IMAGE}
   MOODLE_VERSION: ${MOODLE_VERSION:?Release metadata is missing MOODLE_VERSION}
   MOODLE_GIT_TAG: ${MOODLE_GIT_TAG:?Release metadata is missing MOODLE_GIT_TAG}
   MOODLE_GIT_REF: ${MOODLE_GIT_REF:?Release metadata is missing MOODLE_GIT_REF}

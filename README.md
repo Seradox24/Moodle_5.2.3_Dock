@@ -1,6 +1,6 @@
-# Moodle 5.2.4 con Docker
+# Moodle 5.3.0 con Docker
 
-Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.2.4 con
+Este repositorio reúne lo necesario para construir y ejecutar Moodle 5.3.0 con
 Docker Compose en Linux. `compose.yaml` define los contenedores; `Dockerfile` construye
 las imágenes de Moodle y Nginx; `releases/release.env` fija las versiones.
 La instalación detallada está en **[deploy-runbook.md](deploy-runbook.md)**.
@@ -18,7 +18,7 @@ se añadirá cuando esté disponible.
 | `web` | Nginx dentro de Docker. Recibe las peticiones y sirve los archivos públicos de Moodle. |
 | `app` | Moodle con PHP-FPM. Ejecuta la aplicación y se conecta a PostgreSQL y Redis. |
 | `cron` | Ejecuta las tareas programadas de Moodle usando la misma imagen de `app`. |
-| `db` | PostgreSQL 16. Guarda la base de datos en el volumen `postgres-data`. |
+| `db` | PostgreSQL 17.11. Guarda la base de datos en el volumen `postgres-data`. |
 | `redis` | Guarda las sesiones de Moodle en memoria. |
 | `code-init` | Copia el código verificado de Moodle al volumen compartido la primera vez y termina. |
 
@@ -138,11 +138,31 @@ Ejemplo de respaldo externo: `sh scripts/backup.sh --env-file /ruta/privada/inst
 El respaldo no contiene el perfil privado. Conservarlo protegido por separado.
 Los tres volúmenes siguen gestionados por Docker; no se requieren bind mounts.
 
-La release 1.0.7 actualiza Moodle a 5.2.4 y PHP a 8.3.36 por correcciones de
-seguridad, conservando referencias por digest. Fuentes oficiales:
-[Moodle 5.2.4](https://moodledev.io/general/releases/5.2/5.2.4) y
-[PHP 8.3.36](https://www.php.net/releases/8_3_36.php).
-El nombre histórico del repositorio no impone la versión del manifiesto.
+La release del instalador 1.1.0 utiliza Moodle 5.3.0 LTS, PHP 8.3.36 y
+PostgreSQL 17.11, con referencias fijadas por SHA/digest. Moodle 5.3 requiere
+PHP 8.3 y PostgreSQL 17 como mínimo. Véanse los
+[requisitos oficiales](https://moodledev.io/general/releases/5.3).
+La imagen ejecuta `composer install --no-dev --classmap-authoritative` con el
+`composer.lock` oficial y la imagen `COMPOSER_IMAGE` fijada en la release: Moodle
+5.3 carga dependencias como `league/oauth2-server` solo desde `vendor/`, y sin
+ellas la API REST (`/api/rest/v2/openapi.json`) responde HTTP 500. `vendor/`
+queda fuera de `public/` y Composer no permanece en la imagen final.
+
+Esta línea admite **instalaciones nuevas con volúmenes vacíos**. No cambiar
+la imagen PostgreSQL 16 por 17 sobre un volumen existente ni reutilizar los
+volúmenes de Moodle 5.2.4. Migrar base de datos, código y plugins requiere un
+procedimiento independiente con respaldo y retorno; no está incluido aquí.
+El inicializador rechaza código de otra release y la restauración requiere
+el manifiesto original coincidente.
+
+La rama `moodle-5.2.4` y el tag `moodle-5.2.4-launcher-1.0.7` conservan la
+base anterior sin modificaciones. Las releases distinguen la versión de
+Moodle de la del instalador. El nombre genérico del repositorio es
+`Seradox24/moodle_Docker`; las carpetas históricas locales no se renombran.
+
+El workflow `Validate release` comprueba perfiles e instalación, operación,
+reinicio, respaldo y restauración en proyectos desechables de Linux. No publica
+imágenes ni despliega servicios. Los plugins externos requieren validación propia.
 
 ## Respaldo periódico y ensayo de recuperación
 
