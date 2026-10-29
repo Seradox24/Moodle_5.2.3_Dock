@@ -142,6 +142,11 @@ La release del instalador 1.1.0 utiliza Moodle 5.3.0 LTS, PHP 8.3.36 y
 PostgreSQL 17.11, con referencias fijadas por SHA/digest. Moodle 5.3 requiere
 PHP 8.3 y PostgreSQL 17 como mínimo. Véanse los
 [requisitos oficiales](https://moodledev.io/general/releases/5.3).
+La imagen ejecuta `composer install --no-dev --classmap-authoritative` con el
+`composer.lock` oficial y la imagen `COMPOSER_IMAGE` fijada en la release: Moodle
+5.3 carga dependencias como `league/oauth2-server` solo desde `vendor/`, y sin
+ellas la API REST (`/api/rest/v2/openapi.json`) responde HTTP 500. `vendor/`
+queda fuera de `public/` y Composer no permanece en la imagen final.
 
 Esta línea admite **instalaciones nuevas con volúmenes vacíos**. No cambiar
 la imagen PostgreSQL 16 por 17 sobre un volumen existente ni reutilizar los

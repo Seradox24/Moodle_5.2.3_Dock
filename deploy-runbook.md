@@ -242,7 +242,10 @@ El respaldo no contiene el perfil privado. Conservarlo protegido por separado.
 Los tres volúmenes siguen gestionados por Docker; no se requieren bind mounts.
 
 El instalador 1.1.0 utiliza Moodle 5.3.0 LTS, PHP 8.3.36 y PostgreSQL 17.11,
-con referencias fijadas por SHA/digest. Los requisitos y el alcance de
+con referencias fijadas por SHA/digest. La construcción instala las
+dependencias Composer bloqueadas de Moodle (necesarias para la API REST y
+OpenAPI) con `COMPOSER_IMAGE`; requiere acceso a Packagist/GitHub al construir.
+Los requisitos y el alcance de
 instalación limpia se detallan al inicio de esta guía y en los
 [requisitos oficiales de Moodle 5.3](https://moodledev.io/general/releases/5.3).
 
