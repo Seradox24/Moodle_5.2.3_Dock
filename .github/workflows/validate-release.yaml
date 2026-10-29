@@ -1,0 +1,21 @@
+name: Validate release
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Shell syntax and independent profiles
+        run: |
+          find scripts docker -name '*.sh' -exec sh -n {} \;
+          env -u TZ python3 tests/profiles.py
+          python3 tests/backup-retention.py
+      - name: Fresh installation, operation and recovery
+        run: env -u TZ python3 tests/release-integration.py

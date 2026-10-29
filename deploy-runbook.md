@@ -1,4 +1,19 @@
-# Moodle 5.2.4: instalación y operación en Linux
+# Moodle 5.3.0: instalación y operación en Linux
+
+## Alcance de la línea 5.3 LTS
+
+El instalador 1.1.0 fija Moodle 5.3.0 y PostgreSQL 17.11. Requiere PHP 8.3
+o superior compatible y PostgreSQL 17 como mínimo. Esta guía instala en un
+proyecto nuevo con volúmenes vacíos; no migra instalaciones 5.2.4/PostgreSQL 16.
+No iniciar PostgreSQL 17 sobre el volumen de PostgreSQL 16. No sustituir el
+código de una instalación existente: `code-init` comprueba su revisión y rechaza
+una release diferente. Preparar cualquier migración como operación independiente
+con respaldo y retorno. La restauración incluida solo acepta la misma release.
+
+Para reproducir la base anterior, usar el tag
+`moodle-5.2.4-launcher-1.0.7` o la rama `moodle-5.2.4` del mismo repositorio.
+Para una instalación reproducible de 5.3, seleccionar el tag
+`moodle-5.3.0-launcher-1.1.0` cuando esté publicado; `main` puede avanzar.
 
 Este repositorio contiene el despliegue Docker de Moodle en Linux. `main` contiene la
 base validada para pseudoproducción. Las versiones de Moodle y de las imágenes
@@ -33,7 +48,7 @@ Comprobar que el puerto local 18080 esté libre. Clonar el repositorio en una
 carpeta vacía; los comandos usan `/srv/plataforma/moodle` como ejemplo:
 
 ```bash
-git clone --branch main --single-branch https://github.com/Seradox24/Moodle_5.2.4_Dock.git /srv/plataforma/moodle
+git clone --branch main --single-branch https://github.com/Seradox24/moodle_Docker.git /srv/plataforma/moodle
 cd /srv/plataforma/moodle
 git rev-parse HEAD
 cp .env.example .env
@@ -76,7 +91,7 @@ el dominio al reverse proxy Nginx del host, según la
 La comprobación HTTP se realiza después de activar ese proxy.
 
 Después de instalar y publicar por HTTPS, revisar los ajustes desde Administración.
-El usuario administrador inicial lo define `MOODLE_ADMIN_USER` (predeterminado `admin`). En Moodle 5.2.4,
+El usuario administrador inicial lo define `MOODLE_ADMIN_USER` (predeterminado `admin`). En Moodle 5.3.0,
 el acceso de la app móvil se activa por defecto si el sitio usa HTTPS. Para
 mantenerlo desactivado, desmarcar «Habilitar servicios web para dispositivos móviles»
 en Características avanzadas. Esto conserva el acceso desde navegadores móviles.
@@ -174,7 +189,7 @@ de cambiar el proxy hacia el sitio recuperado.
 ## Instalar plugins desde Administración
 
 En operación normal `app`, `web` y `cron` leen `moodle-code` sin permiso de
-escritura. Para instalar un plugin compatible con Moodle 5.2.4, probarlo primero
+escritura. Para instalar un plugin compatible con Moodle 5.3.0, probarlo primero
 en desarrollo y respaldar base, `moodledata` y código. Abrir la ventana solo el
 tiempo necesario. Desde la raíz del clon, con el `.env` seleccionado:
 
@@ -226,9 +241,9 @@ Ejemplo de respaldo externo: `sh scripts/backup.sh --env-file /ruta/privada/inst
 El respaldo no contiene el perfil privado. Conservarlo protegido por separado.
 Los tres volúmenes siguen gestionados por Docker; no se requieren bind mounts.
 
-La release 1.0.7 actualiza Moodle a 5.2.4 y PHP a 8.3.36 por correcciones de
+La release 1.0.7 actualiza Moodle a 5.3.0 y PHP a 8.3.36 por correcciones de
 seguridad, conservando referencias por digest. Fuentes oficiales:
-[Moodle 5.2.4](https://moodledev.io/general/releases/5.2/5.2.4) y
+[Moodle 5.3.0](https://moodledev.io/general/releases/5.2/5.3.0) y
 [PHP 8.3.36](https://www.php.net/releases/8_3_36.php).
 El nombre histórico del repositorio no impone la versión del manifiesto.
 
