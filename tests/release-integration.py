@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import urllib.parse
 import urllib.request
+import urllib.error
 
 ROOT = Path(__file__).resolve().parents[1]
 os.chdir(ROOT)
@@ -102,9 +103,21 @@ MOODLE_LANG=en
         if version.strip() != '5.3.0':
             raise RuntimeError('Expected Moodle 5.3.0')
         api_diagnostic = compose(profiles[0], 'exec', '-T', '--user', 'www-data',
-                                 'app', 'php', '/dev/stdin', success=None, data=b'''<?php
+                                 'app', 'php', '-d', 'display_errors=1', '-d', 'log_errors=0',
+                                 '/dev/stdin', success=None, data=b'''<?php
+register_shutdown_function(function () {
+    if ($error = error_get_last()) {
+        echo 'OpenAPI shutdown diagnostic: ' . json_encode($error) . "\\n";
+    }
+});
 define('CLI_SCRIPT', true);
 require '/var/www/moodle/config.php';
+$CFG->debug = DEBUG_DEVELOPER;
+$CFG->debugdisplay = true;
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '0');
+echo "Generating OpenAPI schema in disposable CLI process.\\n";
 try {
     $response = \\core\\di::get(\\core\\router\\apidocs::class)->openapi_docs(new \\GuzzleHttp\\Psr7\\Response());
     $schema = json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
@@ -124,7 +137,7 @@ try {
         fixture(profiles[0], 'seed')
         login(28881, password)
         compose(profiles[0], 'exec', '-T', '--user', 'www-data', 'app',
-                'php', 'admin/cli/cron.php')
+                'php', 'admin/cli/cron.php', '--keep-alive=0')
         fixture(profiles[0], 'verify')
         compose(profiles[0], 'restart', 'db', 'redis', 'app', 'web', 'cron')
         compose(profiles[0], 'up', '-d', '--wait', 'app', 'web', 'cron')
@@ -158,12 +171,20 @@ try {
         run(['sh', 'scripts/restore.sh', '--env-file', profiles[1], '--backup', backup])
         fixture(profiles[1], 'verify')
         login(28882, password)
+        try:
+            request = urllib.request.Request('http://127.0.0.1:28882/api/rest/v2/openapi.json',
+                                             headers={'Accept': 'application/json'})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                print('OpenAPI HTTP status:', response.status, flush=True)
+        except urllib.error.HTTPError as error:
+            print('OpenAPI HTTP diagnostic:', error.code, error.read(8192).decode(errors='replace'), flush=True)
         run(['sh', 'scripts/smoke-test.sh', '--env-file', profiles[1]])
         if 'OpenAPI schema generation verified.' not in api_diagnostic:
             raise RuntimeError('OpenAPI CLI generation failed; see diagnostic above')
         print('Fresh release, persistence, backup and isolated restoration passed.', flush=True)
     except Exception:
-        compose(profiles[0], 'logs', '--no-color', '--tail', '60', 'app', 'web')
+        for profile in profiles[:2]:
+            compose(profile, 'logs', '--no-color', '--tail', '60', 'app', 'web')
         raise
     finally:
         # Only the random projects whose absence was checked before this run.

@@ -14,7 +14,7 @@ jobs:
           persist-credentials: false
       - name: Shell syntax and independent profiles
         run: |
-          find scripts docker -name '*.sh' -exec sh -n {} \;
+          find scripts docker -name '*.sh' -print0 | xargs -0 -n 1 sh -n
           env -u TZ python3 tests/profiles.py
           python3 tests/backup-retention.py
       - name: Fresh installation, operation and recovery
